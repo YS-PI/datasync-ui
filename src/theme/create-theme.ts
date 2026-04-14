@@ -14,11 +14,17 @@ import type { ThemeOptions } from './types';
 // ----------------------------------------------------------------------
 
 export const baseTheme: ThemeOptions = {
+  defaultColorScheme: 'light',
   colorSchemes: {
     light: {
       palette: palette.light,
       shadows: shadows.light,
       customShadows: customShadows.light,
+    },
+    dark: {
+      palette: palette.dark,
+      shadows: shadows.dark,
+      customShadows: customShadows.dark,
     },
   },
   components,

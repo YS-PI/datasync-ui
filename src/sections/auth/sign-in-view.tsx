@@ -1,85 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState , useEffect } from 'react';
+import { useAuth } from 'react-oidc-context';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { Iconify } from 'src/components/iconify';
+import { isCognitoConfigured } from 'src/auth';
 
 // ----------------------------------------------------------------------
 
 export function SignInView() {
   const router = useRouter();
+  const auth = useAuth();
+  const [username, setUsername] = useState('');
 
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleSignIn = useCallback(() => {
-    router.push('/');
-  }, [router]);
-
-  const renderForm = (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        flexDirection: 'column',
-      }}
-    >
-      <TextField
-        fullWidth
-        name="email"
-        label="Email address"
-        defaultValue="hello@gmail.com"
-        sx={{ mb: 3 }}
-        slotProps={{
-          inputLabel: { shrink: true },
-        }}
-      />
-
-      <Link variant="body2" color="inherit" sx={{ mb: 1.5 }}>
-        Forgot password?
-      </Link>
-
-      <TextField
-        fullWidth
-        name="password"
-        label="Password"
-        defaultValue="@demo1234"
-        type={showPassword ? 'text' : 'password'}
-        slotProps={{
-          inputLabel: { shrink: true },
-          input: {
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                  <Iconify icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'} />
-                </IconButton>
-              </InputAdornment>
-            ),
-          },
-        }}
-        sx={{ mb: 3 }}
-      />
-
-      <Button
-        fullWidth
-        size="large"
-        type="submit"
-        color="inherit"
-        variant="contained"
-        onClick={handleSignIn}
-      >
-        Sign in
-      </Button>
-    </Box>
-  );
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      router.replace('/');
+    }
+  }, [auth.isAuthenticated, router]);
 
   return (
     <>
@@ -89,48 +33,62 @@ export function SignInView() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          mb: 5,
+          mb: 4,
         }}
       >
         <Typography variant="h5">Sign in</Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'text.secondary',
-          }}
-        >
-          Don’t have an account?
-          <Link variant="subtitle2" sx={{ ml: 0.5 }}>
-            Get started
-          </Link>
+        <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+          Inicia sesion con Cognito para acceder al dashboard de DataSync.
         </Typography>
       </Box>
-      {renderForm}
-      <Divider sx={{ my: 3, '&::before, &::after': { borderTopStyle: 'dashed' } }}>
-        <Typography
-          variant="overline"
-          sx={{ color: 'text.secondary', fontWeight: 'fontWeightMedium' }}
-        >
-          OR
-        </Typography>
-      </Divider>
-      <Box
-        sx={{
-          gap: 1,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
+
+      {!isCognitoConfigured() && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Cognito no esta configurado. Define `VITE_COGNITO_REGION`, `VITE_COGNITO_USER_POOL_ID`,
+          `VITE_COGNITO_CLIENT_ID` y `VITE_COGNITO_DOMAIN` en tu `.env`.
+        </Alert>
+      )}
+
+      {!!auth.error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {auth.error.message}
+        </Alert>
+      )}
+
+      <TextField
+        fullWidth
+        label="Usuario"
+        placeholder="Ingresa tu usuario"
+        value={username}
+        onChange={(event) => setUsername(event.target.value)}
+        sx={{ mb: 2 }}
+      />
+
+      <Button
+        fullWidth
+        size="large"
+        color="inherit"
+        variant="contained"
+        disabled={!isCognitoConfigured() || auth.isLoading}
+        onClick={() =>
+          void auth.signinRedirect({
+            extraQueryParams: username.trim() ? { login_hint: username.trim() } : undefined,
+          })
+        }
       >
-        <IconButton color="inherit">
-          <Iconify width={22} icon="socials:google" />
-        </IconButton>
-        <IconButton color="inherit">
-          <Iconify width={22} icon="socials:github" />
-        </IconButton>
-        <IconButton color="inherit">
-          <Iconify width={22} icon="socials:twitter" />
-        </IconButton>
-      </Box>
+        {auth.isLoading ? 'Redirigiendo...' : 'Ingresar con usuario'}
+      </Button>
+
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2 }}>
+        Usa tu nombre de usuario de Cognito (no correo).
+      </Typography>
+
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+        Problemas al ingresar?
+        <Link href="#" sx={{ ml: 0.5 }}>
+          Contacta al administrador.
+        </Link>
+      </Typography>
     </>
   );
 }

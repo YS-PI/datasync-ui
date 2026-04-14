@@ -1,5 +1,6 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import { useAuth } from 'react-oidc-context';
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -7,14 +8,13 @@ import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import Popover from '@mui/material/Popover';
 import Divider from '@mui/material/Divider';
-import MenuList from '@mui/material/MenuList';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 
-import { useRouter, usePathname } from 'src/routes/hooks';
+import { useRouter } from 'src/routes/hooks';
 
 import { _myAccount } from 'src/_mock';
+import { isCognitoConfigured, getCognitoHostedLogoutUrl } from 'src/auth';
 
 // ----------------------------------------------------------------------
 
@@ -27,10 +27,9 @@ export type AccountPopoverProps = IconButtonProps & {
   }[];
 };
 
-export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps) {
+export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
   const router = useRouter();
-
-  const pathname = usePathname();
+  const auth = useAuth();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -42,13 +41,28 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
     setOpenPopover(null);
   }, []);
 
-  const handleClickItem = useCallback(
-    (path: string) => {
-      handleClosePopover();
-      router.push(path);
-    },
-    [handleClosePopover, router]
-  );
+  const handleLogout = useCallback(async () => {
+    handleClosePopover();
+
+    if (isCognitoConfigured()) {
+      await auth.removeUser();
+      window.location.replace(getCognitoHostedLogoutUrl());
+
+      return;
+    }
+
+    router.replace('/sign-in');
+  }, [auth, handleClosePopover, router]);
+
+  const displayName =
+    auth.user?.profile?.['cognito:username']?.toString() ||
+    auth.user?.profile?.name?.toString() ||
+    auth.user?.profile?.preferred_username?.toString() ||
+    _myAccount?.displayName ||
+    'Jaydon Frankie';
+
+  const displayEmail =
+    auth.user?.profile?.email?.toString() || _myAccount?.email || 'demo@minimals.cc';
 
   return (
     <>
@@ -83,53 +97,18 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
       >
         <Box sx={{ p: 2, pb: 1.5 }}>
           <Typography variant="subtitle2" noWrap>
-            {_myAccount?.displayName}
+            {displayName}
           </Typography>
 
           <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-            {_myAccount?.email}
+            {displayEmail}
           </Typography>
         </Box>
 
         <Divider sx={{ borderStyle: 'dashed' }} />
 
-        <MenuList
-          disablePadding
-          sx={{
-            p: 1,
-            gap: 0.5,
-            display: 'flex',
-            flexDirection: 'column',
-            [`& .${menuItemClasses.root}`]: {
-              px: 1,
-              gap: 2,
-              borderRadius: 0.75,
-              color: 'text.secondary',
-              '&:hover': { color: 'text.primary' },
-              [`&.${menuItemClasses.selected}`]: {
-                color: 'text.primary',
-                bgcolor: 'action.selected',
-                fontWeight: 'fontWeightSemiBold',
-              },
-            },
-          }}
-        >
-          {data.map((option) => (
-            <MenuItem
-              key={option.label}
-              selected={option.href === pathname}
-              onClick={() => handleClickItem(option.href)}
-            >
-              {option.icon}
-              {option.label}
-            </MenuItem>
-          ))}
-        </MenuList>
-
-        <Divider sx={{ borderStyle: 'dashed' }} />
-
         <Box sx={{ p: 1 }}>
-          <Button fullWidth color="error" size="medium" variant="text">
+          <Button fullWidth color="error" size="medium" variant="text" onClick={handleLogout}>
             Logout
           </Button>
         </Box>

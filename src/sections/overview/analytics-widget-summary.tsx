@@ -19,9 +19,12 @@ import { Chart, useChart } from 'src/components/chart';
 type Props = CardProps & {
   title: string;
   total: number;
-  percent: number;
+  value?: string;
+  percent?: number;
   color?: PaletteColorKey;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  showTrending?: boolean;
+  showChart?: boolean;
   chart: {
     series: number[];
     categories: string[];
@@ -34,8 +37,11 @@ export function AnalyticsWidgetSummary({
   icon,
   title,
   total,
+  value,
   chart,
-  percent,
+  percent = 0,
+  showTrending = true,
+  showChart = true,
   color = 'primary',
   ...other
 }: Props) {
@@ -56,7 +62,7 @@ export function AnalyticsWidgetSummary({
       },
     },
     tooltip: {
-      y: { formatter: (value: number) => fNumber(value), title: { formatter: () => '' } },
+      y: { formatter: (num: number) => fNumber(num), title: { formatter: () => '' } },
     },
     markers: {
       strokeWidth: 0,
@@ -93,14 +99,19 @@ export function AnalyticsWidgetSummary({
           color: `${color}.darker`,
           backgroundColor: 'common.white',
           backgroundImage: `linear-gradient(135deg, ${varAlpha(theme.vars.palette[color].lighterChannel, 0.48)}, ${varAlpha(theme.vars.palette[color].lightChannel, 0.48)})`,
+          ...theme.applyStyles('dark', {
+            color: theme.vars.palette[color].lighter,
+            backgroundColor: varAlpha(theme.vars.palette.grey['900Channel'], 0.8),
+            backgroundImage: `linear-gradient(135deg, ${varAlpha(theme.vars.palette[color].mainChannel, 0.22)}, ${varAlpha(theme.vars.palette.grey['800Channel'], 0.64)})`,
+          }),
         }),
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
-      <Box sx={{ width: 48, height: 48, mb: 3 }}>{icon}</Box>
+      {icon && <Box sx={{ width: 48, height: 48, mb: 3 }}>{icon}</Box>}
 
-      {renderTrending()}
+      {showTrending && renderTrending()}
 
       <Box
         sx={{
@@ -113,15 +124,17 @@ export function AnalyticsWidgetSummary({
         <Box sx={{ flexGrow: 1, minWidth: 112 }}>
           <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
 
-          <Box sx={{ typography: 'h4' }}>{fShortenNumber(total)}</Box>
+          <Box sx={{ typography: 'h4' }}>{value ?? fShortenNumber(total)}</Box>
         </Box>
 
-        <Chart
-          type="line"
-          series={[{ data: chart.series }]}
-          options={chartOptions}
-          sx={{ width: 84, height: 56 }}
-        />
+        {showChart && (
+          <Chart
+            type="line"
+            series={[{ data: chart.series }]}
+            options={chartOptions}
+            sx={{ width: 84, height: 56 }}
+          />
+        )}
       </Box>
 
       <SvgColor
@@ -135,6 +148,10 @@ export function AnalyticsWidgetSummary({
           opacity: 0.24,
           position: 'absolute',
           color: `${color}.main`,
+          ...theme.applyStyles('dark', {
+            opacity: 0.18,
+            color: theme.vars.palette[color].light,
+          }),
         }}
       />
     </Card>

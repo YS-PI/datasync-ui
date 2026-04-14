@@ -36,3 +36,7 @@ build
 tsconfig.tsbuildinfo
 .ncurc.js
 knip.jsonc
+
+#agent
+.agents
+skills-lock.json
