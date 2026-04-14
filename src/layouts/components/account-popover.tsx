@@ -14,7 +14,7 @@ import IconButton from '@mui/material/IconButton';
 import { useRouter } from 'src/routes/hooks';
 
 import { _myAccount } from 'src/_mock';
-import { isCognitoConfigured, getCognitoHostedLogoutUrl } from 'src/auth';
+import { isCognitoConfigured, getCognitoHostedLoginUrl, getCognitoHostedLogoutUrl } from 'src/auth';
 
 // ----------------------------------------------------------------------
 
@@ -42,18 +42,44 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
     setOpenPopover(null);
   }, []);
 
+  const clearBrowserSession = useCallback(() => {
+    try {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    } catch {
+      // Ignore storage errors.
+    }
+  }, []);
+
   const handleLogout = useCallback(async () => {
     handleClosePopover();
 
-    if (isAuthEnabled && auth) {
+    if (auth) {
       await auth.removeUser();
-      window.location.replace(getCognitoHostedLogoutUrl());
+    }
+
+    clearBrowserSession();
+
+    if (isAuthEnabled) {
+      const hostedLogoutUrl = getCognitoHostedLogoutUrl();
+
+      if (hostedLogoutUrl) {
+        window.location.replace(hostedLogoutUrl);
+
+        return;
+      }
+    }
+
+    const hostedLoginUrl = getCognitoHostedLoginUrl();
+
+    if (hostedLoginUrl) {
+      window.location.replace(hostedLoginUrl);
 
       return;
     }
 
     router.replace('/sign-in');
-  }, [auth, handleClosePopover, isAuthEnabled, router]);
+  }, [auth, clearBrowserSession, handleClosePopover, isAuthEnabled, router]);
 
   const displayName =
     auth?.user?.profile?.['cognito:username']?.toString() ||

@@ -18,15 +18,31 @@ const redirectSignOut =
 const scope = import.meta.env.VITE_COGNITO_SCOPES ?? 'openid profile email';
 
 const configured = authEnabled && Boolean(region && userPoolId && clientId && domain);
+const hostedUiConfigured = Boolean(clientId && domain && redirectSignIn);
 
 export function isCognitoConfigured() {
   return configured;
 }
 
 export function getCognitoHostedLogoutUrl() {
+  if (!clientId || !domain || !redirectSignOut) {
+    return '';
+  }
+
   const logoutUri = encodeURIComponent(redirectSignOut);
 
   return `${domain}/logout?client_id=${clientId}&logout_uri=${logoutUri}`;
+}
+
+export function getCognitoHostedLoginUrl() {
+  if (!hostedUiConfigured) {
+    return '';
+  }
+
+  const redirectUri = encodeURIComponent(redirectSignIn);
+  const encodedScope = encodeURIComponent(scope);
+
+  return `${domain}/login?client_id=${clientId}&response_type=code&scope=${encodedScope}&redirect_uri=${redirectUri}`;
 }
 
 export function getCognitoPostLogoutRedirectUri() {
