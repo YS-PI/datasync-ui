@@ -101,6 +101,9 @@ export function NavMobile({
 
 export function NavContent({ data, slots, sx }: NavContentProps) {
   const pathname = usePathname();
+  const muiTheme = useTheme();
+  const logoSrc =
+    muiTheme.palette.mode === 'dark' ? '/assets/logo/urp-logo2.svg' : '/assets/logo/urp-logo1.png';
 
   return (
     <>
@@ -117,7 +120,7 @@ export function NavContent({ data, slots, sx }: NavContentProps) {
         <Box
           component="img"
           alt="Unidad de Gestion Servidores y Cloud"
-          src="/assets/logo/ugsn.png"
+          src={logoSrc}
           sx={{
             width: 1,
             height: 'auto',
