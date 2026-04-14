@@ -5,9 +5,9 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import ListItem from '@mui/material/ListItem';
+import { useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
-import { useTheme, useColorScheme } from '@mui/material/styles';
 
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
@@ -101,36 +101,9 @@ export function NavMobile({
 
 export function NavContent({ data, slots, sx }: NavContentProps) {
   const pathname = usePathname();
-  const muiTheme = useTheme();
-  const { mode } = useColorScheme();
-  const isDarkMode = mode ? mode === 'dark' : muiTheme.palette.mode === 'dark';
-  const logoSrc = isDarkMode ? '/assets/logo/urp-logo2.svg' : '/assets/logo/urp-logo1.png';
 
   return (
     <>
-      <Box
-        component={RouterLink}
-        href="/"
-        aria-label="UGSN logo"
-        sx={{
-          display: 'block',
-          width: 0.28,
-          mx: 'auto',
-          mb: 2,
-        }}
-      >
-        <Box
-          component="img"
-          alt="Unidad de Gestion Servidores y Cloud"
-          src={logoSrc}
-          sx={{
-            width: 1,
-            height: 'auto',
-            display: 'block',
-          }}
-        />
-      </Box>
-
       {slots?.topArea}
 
       <Scrollbar fillContent>
