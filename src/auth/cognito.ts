@@ -1,14 +1,11 @@
 import type { AuthProviderProps } from 'react-oidc-context';
 
-const defaultRegion = 'us-east-1';
-const defaultUserPoolId = 'us-east-1_McPqB8meW';
-const defaultClientId = '50u4su97uuq2jjgd7vk3tgh7kl';
-const defaultDomain = 'https://us-east-1mcpqb8mew.auth.us-east-1.amazoncognito.com';
+const authEnabled = import.meta.env.VITE_AUTH_ENABLED === 'true';
 
-const region = import.meta.env.VITE_COGNITO_REGION ?? defaultRegion;
-const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID ?? defaultUserPoolId;
-const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID ?? defaultClientId;
-const domain = (import.meta.env.VITE_COGNITO_DOMAIN ?? defaultDomain).replace(/\/+$/, '');
+const region = import.meta.env.VITE_COGNITO_REGION ?? '';
+const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID ?? '';
+const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID ?? '';
+const domain = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/+$/, '');
 
 const authority = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
 
@@ -20,7 +17,7 @@ const redirectSignOut =
 
 const scope = import.meta.env.VITE_COGNITO_SCOPES ?? 'openid profile email';
 
-const configured = Boolean(region && userPoolId && clientId && domain);
+const configured = authEnabled && Boolean(region && userPoolId && clientId && domain);
 
 export function isCognitoConfigured() {
   return configured;

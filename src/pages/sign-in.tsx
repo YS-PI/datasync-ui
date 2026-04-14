@@ -16,10 +16,14 @@ import { isCognitoConfigured } from 'src/auth';
 export default function Page() {
   const router = useRouter();
   const auth = useAuth();
-  const { isAuthenticated, isLoading, activeNavigator, signinRedirect } = auth;
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const isLoading = auth?.isLoading ?? false;
+  const activeNavigator = auth?.activeNavigator;
+  const signinRedirect = auth?.signinRedirect;
 
   useEffect(() => {
     if (!isCognitoConfigured()) {
+      router.replace('/');
       return;
     }
 
@@ -28,7 +32,7 @@ export default function Page() {
       return;
     }
 
-    if (!isLoading && !activeNavigator) {
+    if (!isLoading && !activeNavigator && signinRedirect) {
       void signinRedirect();
     }
   }, [activeNavigator, isAuthenticated, isLoading, router, signinRedirect]);
@@ -40,8 +44,8 @@ export default function Page() {
       <Box sx={{ minHeight: '50vh', display: 'grid', placeItems: 'center', p: 3 }}>
         {!isCognitoConfigured() ? (
           <Alert severity="warning" sx={{ maxWidth: 560 }}>
-            Cognito no esta configurado. Define `VITE_COGNITO_REGION`, `VITE_COGNITO_USER_POOL_ID`,
-            `VITE_COGNITO_CLIENT_ID` y `VITE_COGNITO_DOMAIN` en tu `.env`.
+            Cognito no esta habilitado o configurado. Revisa `VITE_AUTH_ENABLED` y las variables
+            `VITE_COGNITO_*` en tu `.env`.
           </Alert>
         ) : (
           <Box sx={{ display: 'grid', gap: 2, placeItems: 'center' }}>

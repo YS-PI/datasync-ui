@@ -1,4 +1,4 @@
-import { useState , useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
 
 import Box from '@mui/material/Box';
@@ -17,13 +17,17 @@ import { isCognitoConfigured } from 'src/auth';
 export function SignInView() {
   const router = useRouter();
   const auth = useAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const isLoading = auth?.isLoading ?? false;
+  const errorMessage = auth?.error?.message;
+  const signinRedirect = auth?.signinRedirect;
   const [username, setUsername] = useState('');
 
   useEffect(() => {
-    if (auth.isAuthenticated) {
+    if (isAuthenticated) {
       router.replace('/');
     }
-  }, [auth.isAuthenticated, router]);
+  }, [isAuthenticated, router]);
 
   return (
     <>
@@ -49,9 +53,9 @@ export function SignInView() {
         </Alert>
       )}
 
-      {!!auth.error && (
+      {!!errorMessage && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {auth.error.message}
+          {errorMessage}
         </Alert>
       )}
 
@@ -69,14 +73,14 @@ export function SignInView() {
         size="large"
         color="inherit"
         variant="contained"
-        disabled={!isCognitoConfigured() || auth.isLoading}
+        disabled={!isCognitoConfigured() || isLoading || !signinRedirect}
         onClick={() =>
-          void auth.signinRedirect({
+          void signinRedirect?.({
             extraQueryParams: username.trim() ? { login_hint: username.trim() } : undefined,
           })
         }
       >
-        {auth.isLoading ? 'Redirigiendo...' : 'Ingresar con usuario'}
+        {isLoading ? 'Redirigiendo...' : 'Ingresar con usuario'}
       </Button>
 
       <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2 }}>

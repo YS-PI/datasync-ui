@@ -30,6 +30,7 @@ export type AccountPopoverProps = IconButtonProps & {
 export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
   const router = useRouter();
   const auth = useAuth();
+  const isAuthEnabled = isCognitoConfigured();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -44,7 +45,7 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
   const handleLogout = useCallback(async () => {
     handleClosePopover();
 
-    if (isCognitoConfigured()) {
+    if (isAuthEnabled && auth) {
       await auth.removeUser();
       window.location.replace(getCognitoHostedLogoutUrl());
 
@@ -52,17 +53,17 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
     }
 
     router.replace('/sign-in');
-  }, [auth, handleClosePopover, router]);
+  }, [auth, handleClosePopover, isAuthEnabled, router]);
 
   const displayName =
-    auth.user?.profile?.['cognito:username']?.toString() ||
-    auth.user?.profile?.name?.toString() ||
-    auth.user?.profile?.preferred_username?.toString() ||
+    auth?.user?.profile?.['cognito:username']?.toString() ||
+    auth?.user?.profile?.name?.toString() ||
+    auth?.user?.profile?.preferred_username?.toString() ||
     _myAccount?.displayName ||
     'Jaydon Frankie';
 
   const displayEmail =
-    auth.user?.profile?.email?.toString() || _myAccount?.email || 'demo@minimals.cc';
+    auth?.user?.profile?.email?.toString() || _myAccount?.email || 'demo@minimals.cc';
 
   return (
     <>

@@ -10,17 +10,19 @@ import { useRouter } from 'src/routes/hooks';
 export default function AuthCallbackPage() {
   const router = useRouter();
   const auth = useAuth();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const errorMessage = auth?.error?.message;
 
   useEffect(() => {
-    if (auth.isAuthenticated) {
+    if (isAuthenticated) {
       router.replace('/');
     }
-  }, [auth.isAuthenticated, router]);
+  }, [isAuthenticated, router]);
 
-  if (auth.error) {
+  if (errorMessage) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{auth.error.message}</Alert>
+        <Alert severity="error">{errorMessage}</Alert>
       </Box>
     );
   }
