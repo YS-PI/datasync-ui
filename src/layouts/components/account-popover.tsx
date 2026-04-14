@@ -61,7 +61,8 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
     clearBrowserSession();
 
     if (isAuthEnabled) {
-      const hostedLogoutUrl = getCognitoHostedLogoutUrl();
+      const postLogoutRedirectUri = `${window.location.origin}/sign-in?force_login=1`;
+      const hostedLogoutUrl = getCognitoHostedLogoutUrl(postLogoutRedirectUri);
 
       if (hostedLogoutUrl) {
         window.location.replace(hostedLogoutUrl);

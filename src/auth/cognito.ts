@@ -24,12 +24,12 @@ export function isCognitoConfigured() {
   return configured;
 }
 
-export function getCognitoHostedLogoutUrl() {
-  if (!clientId || !domain || !redirectSignOut) {
+export function getCognitoHostedLogoutUrl(postLogoutRedirectUri = redirectSignOut) {
+  if (!clientId || !domain || !postLogoutRedirectUri) {
     return '';
   }
 
-  const logoutUri = encodeURIComponent(redirectSignOut);
+  const logoutUri = encodeURIComponent(postLogoutRedirectUri);
 
   return `${domain}/logout?client_id=${clientId}&logout_uri=${logoutUri}`;
 }

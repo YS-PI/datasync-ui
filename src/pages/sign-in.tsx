@@ -20,10 +20,16 @@ export default function Page() {
   const isLoading = auth?.isLoading ?? false;
   const activeNavigator = auth?.activeNavigator;
   const signinRedirect = auth?.signinRedirect;
+  const forceLogin = new URLSearchParams(window.location.search).get('force_login') === '1';
 
   useEffect(() => {
     if (!isCognitoConfigured()) {
       router.replace('/');
+      return;
+    }
+
+    if (!isLoading && !activeNavigator && signinRedirect && forceLogin) {
+      void signinRedirect({ extraQueryParams: { prompt: 'login' } });
       return;
     }
 
@@ -35,7 +41,7 @@ export default function Page() {
     if (!isLoading && !activeNavigator && signinRedirect) {
       void signinRedirect();
     }
-  }, [activeNavigator, isAuthenticated, isLoading, router, signinRedirect]);
+  }, [activeNavigator, forceLogin, isAuthenticated, isLoading, router, signinRedirect]);
 
   return (
     <>
