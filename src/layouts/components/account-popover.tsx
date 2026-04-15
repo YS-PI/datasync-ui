@@ -14,7 +14,7 @@ import IconButton from '@mui/material/IconButton';
 import { useRouter } from 'src/routes/hooks';
 
 import { _myAccount } from 'src/_mock';
-import { isCognitoConfigured, getCognitoHostedLoginUrl, getCognitoHostedLogoutUrl } from 'src/auth';
+import { isCognitoConfigured, getCognitoHostedLogoutUrl } from 'src/auth';
 
 // ----------------------------------------------------------------------
 
@@ -61,22 +61,13 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
     clearBrowserSession();
 
     if (isAuthEnabled) {
-      const postLogoutRedirectUri = `${window.location.origin}/sign-in?force_login=1`;
-      const hostedLogoutUrl = getCognitoHostedLogoutUrl(postLogoutRedirectUri);
+      const hostedLogoutUrl = getCognitoHostedLogoutUrl();
 
       if (hostedLogoutUrl) {
         window.location.replace(hostedLogoutUrl);
 
         return;
       }
-    }
-
-    const hostedLoginUrl = getCognitoHostedLoginUrl();
-
-    if (hostedLoginUrl) {
-      window.location.replace(hostedLoginUrl);
-
-      return;
     }
 
     router.replace('/sign-in');
