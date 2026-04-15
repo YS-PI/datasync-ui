@@ -12,14 +12,18 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const auth = useAuth();
-  const { activeNavigator, error, isAuthenticated, isLoading, signinRedirect } = auth;
+  const activeNavigator = auth?.activeNavigator;
+  const error = auth?.error;
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const isLoading = auth?.isLoading ?? false;
+  const signinRedirect = auth?.signinRedirect;
 
   useEffect(() => {
     if (!isCognitoConfigured()) {
       return;
     }
 
-    if (!isAuthenticated && !isLoading && !activeNavigator && !error) {
+    if (!isAuthenticated && !isLoading && !activeNavigator && !error && signinRedirect) {
       void signinRedirect();
     }
   }, [activeNavigator, error, isAuthenticated, isLoading, signinRedirect]);
