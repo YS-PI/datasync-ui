@@ -674,9 +674,9 @@ export function OverviewAnalyticsView() {
             }}
           >
             <Box sx={{ minWidth: 320 }}>
-              <Typography variant="h4">BkSync Dashboard</Typography>
+              <Typography variant="h4">BKSync Dashboard</Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                Vista operativa de ejecuciones, validacion y transferencia por disco.
+                Monitoreo y validación de transferencias de archivos.
               </Typography>
 
               <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }}>

@@ -8,6 +8,6 @@ export type ConfigValue = {
 };
 
 export const CONFIG: ConfigValue = {
-  appName: 'BkSync Dashboard',
+  appName: 'BKSync Dashboard',
   appVersion: packageJson.version,
 };
