@@ -100,7 +100,7 @@ export function OverviewAnalyticsView() {
       setExpandedTask((current) => {
         if (!hasInitializedExpandedTaskRef.current) {
           hasInitializedExpandedTaskRef.current = true;
-          return sortedTasks[0]?.name ?? false;
+          return false;
         }
 
         if (sortedTasks.length === 0) {
