@@ -1,6 +1,5 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { useAuth } from 'react-oidc-context';
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -29,8 +28,6 @@ export type AccountPopoverProps = IconButtonProps & {
 
 export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
   const router = useRouter();
-  const auth = useAuth();
-  const isAuthEnabled = isCognitoConfigured();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -54,34 +51,22 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
   const handleLogout = useCallback(async () => {
     handleClosePopover();
 
-    if (auth) {
-      await auth.removeUser();
-    }
-
     clearBrowserSession();
 
-    if (isAuthEnabled) {
-      const hostedLogoutUrl = getCognitoHostedLogoutUrl();
+    const hostedLogoutUrl = getCognitoHostedLogoutUrl();
 
-      if (hostedLogoutUrl) {
-        window.location.replace(hostedLogoutUrl);
+    if (isCognitoConfigured() && hostedLogoutUrl) {
+      window.location.href = hostedLogoutUrl;
 
-        return;
-      }
+      return;
     }
 
-    router.replace('/sign-in');
-  }, [auth, clearBrowserSession, handleClosePopover, isAuthEnabled, router]);
+    router.replace('/');
+  }, [clearBrowserSession, handleClosePopover, router]);
 
-  const displayName =
-    auth?.user?.profile?.['cognito:username']?.toString() ||
-    auth?.user?.profile?.name?.toString() ||
-    auth?.user?.profile?.preferred_username?.toString() ||
-    _myAccount?.displayName ||
-    'Jaydon Frankie';
+  const displayName = _myAccount?.displayName || 'Jaydon Frankie';
 
-  const displayEmail =
-    auth?.user?.profile?.email?.toString() || _myAccount?.email || 'demo@minimals.cc';
+  const displayEmail = _myAccount?.email || 'demo@minimals.cc';
 
   return (
     <>
