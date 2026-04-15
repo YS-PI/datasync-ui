@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
 
 import Box from '@mui/material/Box';
@@ -12,15 +12,23 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const auth = useAuth();
-  const searchParams = new URLSearchParams(window.location.search);
-  const hasOidcCallbackParams =
-    searchParams.has('state') && (searchParams.has('code') || searchParams.has('error'));
+  const { activeNavigator, error, isAuthenticated, isLoading, signinRedirect } = auth;
+
+  useEffect(() => {
+    if (!isCognitoConfigured()) {
+      return;
+    }
+
+    if (!isAuthenticated && !isLoading && !activeNavigator && !error) {
+      void signinRedirect();
+    }
+  }, [activeNavigator, error, isAuthenticated, isLoading, signinRedirect]);
 
   if (!isCognitoConfigured()) {
     return <>{children}</>;
   }
 
-  if (auth.isLoading || auth.activeNavigator || hasOidcCallbackParams) {
+  if (isLoading || activeNavigator) {
     return (
       <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
         <CircularProgress />
@@ -28,12 +36,12 @@ export function AuthGuard({ children }: Props) {
     );
   }
 
-  if (auth.error) {
-    return <Navigate to="/sign-in" replace />;
-  }
-
-  if (!auth.isAuthenticated) {
-    return <Navigate to="/sign-in" replace />;
+  if (error || !isAuthenticated) {
+    return (
+      <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return <>{children}</>;
