@@ -33,6 +33,7 @@ import {
   sortTasksByName,
   formatThroughput,
   summarizeDatasync,
+  getStatusChipColor,
   isDatasyncResponse,
   formatNextExecution,
   formatPercentChange,
@@ -41,6 +42,8 @@ import {
   getValidationMessage,
   translateAwsErrorToEs,
   formatStorageFromBytes,
+  getExecutionDisplayStatus,
+  getExecutionStatusLabelEs,
   formatTransferredWithSource,
 } from '../datasync-format';
 
@@ -173,12 +176,13 @@ export function OverviewAnalyticsView() {
 
       data.tasks.forEach((task) => {
         const execution = task.history[point] ?? task.last_exec;
+        const executionDisplayStatus = getExecutionDisplayStatus(execution);
 
-        if (execution.status === 'SUCCESS') {
+        if (executionDisplayStatus === 'SUCCESS') {
           successCount += 1;
         }
 
-        if (execution.status === 'ERROR') {
+        if (executionDisplayStatus === 'ERROR') {
           errorCount += 1;
         }
 
@@ -240,10 +244,15 @@ export function OverviewAnalyticsView() {
     const isExpanded = expandedTask === task.name;
     const validation = getValidationMessage(task);
     const taskLastErrorKey = `${task.name}-last-error`;
-    const isCurrentError = task.last_exec.status === 'ERROR';
-    const borderStatusColor = isCurrentError
-      ? theme.vars.palette.error.main
-      : theme.vars.palette.success.main;
+    const lastExecDisplayStatus = getExecutionDisplayStatus(task.last_exec);
+    const isCurrentRunning =
+      lastExecDisplayStatus === 'RUNNING' || task.task_status.toUpperCase() === 'RUNNING';
+    const isCurrentError = lastExecDisplayStatus === 'ERROR' && !isCurrentRunning;
+    const borderStatusColor = isCurrentRunning
+      ? theme.vars.palette.info.main
+      : isCurrentError
+        ? theme.vars.palette.error.main
+        : theme.vars.palette.success.main;
 
     const validationMessage =
       validation.severity === 'error' && task.last_exec.error
@@ -281,8 +290,11 @@ export function OverviewAnalyticsView() {
             sx={{ mb: 1.75 }}
           >
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Label color={isCurrentError ? 'error' : 'success'} variant="soft">
-                {isCurrentError ? 'En error' : 'Operacion estable'}
+              <Label
+                color={isCurrentRunning ? 'info' : isCurrentError ? 'error' : 'success'}
+                variant="soft"
+              >
+                {isCurrentRunning ? 'En curso' : isCurrentError ? 'En error' : 'Operacion estable'}
               </Label>
               {hasRecentErrors && !isCurrentError && (
                 <Label color="warning" variant="soft">
@@ -328,11 +340,8 @@ export function OverviewAnalyticsView() {
                 Estado
               </Typography>
               <Box sx={{ mt: 0.5 }}>
-                <Label
-                  color={task.last_exec.status === 'SUCCESS' ? 'success' : 'error'}
-                  variant="soft"
-                >
-                  {task.last_exec.status === 'SUCCESS' ? 'Exitoso' : 'Error'}
+                <Label color={getStatusChipColor(lastExecDisplayStatus)} variant="soft">
+                  {getExecutionStatusLabelEs(lastExecDisplayStatus)}
                 </Label>
               </Box>
             </Grid>
@@ -526,10 +535,10 @@ export function OverviewAnalyticsView() {
                               <TableCell>{execution.start_time}</TableCell>
                               <TableCell>
                                 <Label
-                                  color={execution.status === 'SUCCESS' ? 'success' : 'error'}
+                                  color={getStatusChipColor(getExecutionDisplayStatus(execution))}
                                   variant="soft"
                                 >
-                                  {execution.status === 'SUCCESS' ? 'Exitoso' : 'Error'}
+                                  {getExecutionStatusLabelEs(getExecutionDisplayStatus(execution))}
                                 </Label>
                               </TableCell>
                               <TableCell>{execution.duration}</TableCell>

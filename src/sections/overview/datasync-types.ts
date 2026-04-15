@@ -1,4 +1,4 @@
-export type DatasyncExecStatus = 'SUCCESS' | 'ERROR' | string;
+export type DatasyncExecStatus = 'SUCCESS' | 'ERROR' | 'RUNNING' | string;
 
 export type DatasyncExecution = {
   arn: string;

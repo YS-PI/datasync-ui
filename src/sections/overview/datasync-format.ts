@@ -172,6 +172,10 @@ export function getValidationMessage(task: DatasyncTask): {
 }
 
 export function getStatusChipColor(status: string): ChipProps['color'] {
+  if (status === 'RUNNING') {
+    return 'info';
+  }
+
   if (status === 'SUCCESS') {
     return 'success';
   }
@@ -184,6 +188,10 @@ export function getStatusChipColor(status: string): ChipProps['color'] {
 }
 
 export function getStatusAlertColor(status: string): AlertColor {
+  if (status === 'RUNNING') {
+    return 'info';
+  }
+
   if (status === 'SUCCESS') {
     return 'success';
   }
@@ -205,6 +213,42 @@ export function sortTasksByName(tasks: DatasyncTask[]): DatasyncTask[] {
 
 export function getExecutionKey(execution: DatasyncExecution): string {
   return `${execution.arn}-${execution.start_time}`;
+}
+
+export function isExecutionRunning(execution: DatasyncExecution): boolean {
+  const durationText = execution.duration?.toLowerCase?.() ?? '';
+
+  return execution.status === 'RUNNING' || durationText.includes('en curso');
+}
+
+export function getExecutionDisplayStatus(
+  execution: DatasyncExecution
+): 'RUNNING' | 'SUCCESS' | 'ERROR' {
+  if (isExecutionRunning(execution)) {
+    return 'RUNNING';
+  }
+
+  if (execution.status === 'SUCCESS') {
+    return 'SUCCESS';
+  }
+
+  return 'ERROR';
+}
+
+export function getExecutionStatusLabelEs(status: string): string {
+  if (status === 'RUNNING') {
+    return 'RUNNING';
+  }
+
+  if (status === 'SUCCESS') {
+    return 'Exitoso';
+  }
+
+  if (status === 'ERROR') {
+    return 'Error';
+  }
+
+  return status;
 }
 
 export function translateAwsErrorToEs(error: string): string {
