@@ -8,6 +8,7 @@ import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
@@ -18,6 +19,9 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import CardContent from '@mui/material/CardContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 import { useTheme, useColorScheme } from '@mui/material/styles';
 
@@ -44,15 +48,18 @@ import {
   formatStorageFromBytes,
   getExecutionDisplayStatus,
   getExecutionStatusLabelEs,
+  executionHasCloudwatchLogs,
   formatTransferredWithSource,
 } from '../datasync-format';
 
-import type { DatasyncTask, DatasyncResponse } from '../datasync-types';
+import type { DatasyncTask, DatasyncResponse, DatasyncExecution } from '../datasync-types';
 
 const DATASYNC_API_URL =
   import.meta.env.VITE_DATASYNC_API_URL ??
   'https://kyk7nif0tj.execute-api.us-east-1.amazonaws.com/';
 const AUTO_REFRESH_MS = 5 * 60 * 60 * 1000;
+
+type LogLevelFilter = 'ALL' | 'INFO' | 'ERROR';
 
 // ----------------------------------------------------------------------
 
@@ -67,6 +74,11 @@ export function OverviewAnalyticsView() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [translatedErrors, setTranslatedErrors] = useState<Record<string, boolean>>({});
+  const [logLevelFilter, setLogLevelFilter] = useState<LogLevelFilter>('ALL');
+  const [selectedLogExecution, setSelectedLogExecution] = useState<{
+    taskName: string;
+    execution: DatasyncExecution;
+  } | null>(null);
   const hasInitializedExpandedTaskRef = useRef(false);
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
@@ -238,6 +250,38 @@ export function OverviewAnalyticsView() {
       </Tooltip>
     </Stack>
   );
+
+  const getCloudwatchEventLevel = (message: string): Exclude<LogLevelFilter, 'ALL'> =>
+    message.trim().startsWith('[ERROR]') ? 'ERROR' : 'INFO';
+
+  const selectedExecutionEvents = useMemo(
+    () => selectedLogExecution?.execution.cloudwatch?.events ?? [],
+    [selectedLogExecution]
+  );
+
+  const logEventCounts = useMemo(() => {
+    const counts = { all: selectedExecutionEvents.length, info: 0, error: 0 };
+
+    selectedExecutionEvents.forEach((event) => {
+      if (getCloudwatchEventLevel(event.message) === 'ERROR') {
+        counts.error += 1;
+      } else {
+        counts.info += 1;
+      }
+    });
+
+    return counts;
+  }, [selectedExecutionEvents]);
+
+  const filteredLogEvents = useMemo(() => {
+    if (logLevelFilter === 'ALL') {
+      return selectedExecutionEvents;
+    }
+
+    return selectedExecutionEvents.filter(
+      (event) => getCloudwatchEventLevel(event.message) === logLevelFilter
+    );
+  }, [logLevelFilter, selectedExecutionEvents]);
 
   const renderTaskRow = (task: DatasyncTask) => {
     const hasRecentErrors = taskHasRecentErrors(task);
@@ -524,6 +568,7 @@ export function OverviewAnalyticsView() {
                           <TableCell>Datos</TableCell>
                           <TableCell>MB/s</TableCell>
                           <TableCell>Archivos/s</TableCell>
+                          <TableCell>Logs</TableCell>
                         </TableRow>
                       </TableHead>
 
@@ -552,6 +597,26 @@ export function OverviewAnalyticsView() {
                               <TableCell>
                                 {formatFileThroughput(execution.file_throughput)}
                               </TableCell>
+                              <TableCell>
+                                {executionHasCloudwatchLogs(execution) ? (
+                                  <Tooltip title="Ver logs de CloudWatch">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={() => {
+                                        setLogLevelFilter('ALL');
+                                        setSelectedLogExecution({ taskName: task.name, execution });
+                                      }}
+                                    >
+                                      <Iconify icon="solar:eye-bold" width={16} />
+                                    </IconButton>
+                                  </Tooltip>
+                                ) : (
+                                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                                    -
+                                  </Typography>
+                                )}
+                              </TableCell>
                             </TableRow>,
                           ];
 
@@ -561,7 +626,7 @@ export function OverviewAnalyticsView() {
                             rows.push(
                               <TableRow key={`${executionKey}-error`}>
                                 <TableCell
-                                  colSpan={9}
+                                  colSpan={10}
                                   sx={{
                                     color: 'error.main',
                                     borderBottom: `1px solid ${varAlpha(theme.vars.palette.error.mainChannel, 0.2)}`,
@@ -758,6 +823,131 @@ export function OverviewAnalyticsView() {
           </>
         )}
       </Stack>
+
+      <Dialog
+        open={Boolean(selectedLogExecution)}
+        onClose={() => {
+          setSelectedLogExecution(null);
+          setLogLevelFilter('ALL');
+        }}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Logs CloudWatch
+          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 0.5 }}>
+            {selectedLogExecution
+              ? `${selectedLogExecution.taskName} · ${selectedLogExecution.execution.execution_id}`
+              : ''}
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            sx={{ mb: 1.5 }}
+          >
+            <ButtonGroup size="small" variant="outlined">
+              <Button
+                variant={logLevelFilter === 'ALL' ? 'contained' : 'outlined'}
+                onClick={() => setLogLevelFilter('ALL')}
+              >
+                Todos ({logEventCounts.all})
+              </Button>
+              <Button
+                variant={logLevelFilter === 'INFO' ? 'contained' : 'outlined'}
+                onClick={() => setLogLevelFilter('INFO')}
+              >
+                INFO ({logEventCounts.info})
+              </Button>
+              <Button
+                variant={logLevelFilter === 'ERROR' ? 'contained' : 'outlined'}
+                onClick={() => setLogLevelFilter('ERROR')}
+              >
+                ERROR ({logEventCounts.error})
+              </Button>
+            </ButtonGroup>
+
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Filtro activo: {logLevelFilter}
+            </Typography>
+          </Stack>
+
+          {!!selectedLogExecution?.execution.error && (
+            <Alert severity="error" sx={{ mb: 1.5 }}>
+              {renderTranslatableError(
+                `${selectedLogExecution.execution.execution_id}-main-error`,
+                selectedLogExecution.execution.error,
+                true
+              )}
+            </Alert>
+          )}
+
+          {filteredLogEvents.length ? (
+            <Stack spacing={1.25}>
+              {filteredLogEvents.map((event, idx) => (
+                <Box
+                  key={`${selectedLogExecution?.execution.execution_id ?? 'execution'}-${idx}-${event.timestamp}`}
+                  sx={{
+                    p: 1.25,
+                    borderRadius: 1,
+                    border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.24)}`,
+                    bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.04),
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    {event.timestamp}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    Stream: {event.stream}
+                  </Typography>
+                  <Stack direction="row" spacing={0.75} sx={{ mt: 0.5, mb: 0.25 }}>
+                    <Label
+                      variant="soft"
+                      color={getCloudwatchEventLevel(event.message) === 'ERROR' ? 'error' : 'info'}
+                    >
+                      {getCloudwatchEventLevel(event.message)}
+                    </Label>
+                  </Stack>
+                  <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                    {event.message}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          ) : (
+            <Alert severity="info">
+              {selectedExecutionEvents.length
+                ? `No hay eventos ${logLevelFilter} para esta ejecucion.`
+                : 'No hay eventos de CloudWatch para esta ejecucion.'}
+            </Alert>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            component="a"
+            href={selectedLogExecution?.execution.cloudwatch?.console_url || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            disabled={!selectedLogExecution?.execution.cloudwatch?.console_url}
+          >
+            Abrir CloudWatch
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setSelectedLogExecution(null);
+              setLogLevelFilter('ALL');
+            }}
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardContent>
   );
 }

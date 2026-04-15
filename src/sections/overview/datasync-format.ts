@@ -251,6 +251,13 @@ export function getExecutionStatusLabelEs(status: string): string {
   return status;
 }
 
+export function executionHasCloudwatchLogs(execution: DatasyncExecution): boolean {
+  return (
+    execution.status === 'ERROR' &&
+    (Boolean(execution.cloudwatch?.has_logs) || Boolean(execution.error))
+  );
+}
+
 export function translateAwsErrorToEs(error: string): string {
   if (!error) {
     return error;
