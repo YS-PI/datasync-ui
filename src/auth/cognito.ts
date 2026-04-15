@@ -10,10 +10,10 @@ const domain = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/+$/, '');
 const authority = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
 
 const redirectSignIn =
-  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN ?? `${window.location.origin}/auth/callback`;
+  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN ?? `${window.location.origin}/`;
 
 const redirectSignOut =
-  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT ?? `${window.location.origin}/sign-in`;
+  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT ?? `${window.location.origin}/`;
 
 const scope = import.meta.env.VITE_COGNITO_SCOPES ?? 'openid profile email';
 
@@ -34,16 +34,15 @@ export function getCognitoHostedLogoutUrl(postLogoutRedirectUri = redirectSignOu
   return `${domain}/logout?client_id=${clientId}&logout_uri=${logoutUri}`;
 }
 
-export function getCognitoHostedLoginUrl(forcePromptLogin = false) {
+export function getCognitoHostedLoginUrl() {
   if (!hostedUiConfigured) {
     return '';
   }
 
   const redirectUri = encodeURIComponent(redirectSignIn);
   const encodedScope = encodeURIComponent(scope);
-  const promptQuery = forcePromptLogin ? '&prompt=login' : '';
 
-  return `${domain}/login?client_id=${clientId}&response_type=code&scope=${encodedScope}&redirect_uri=${redirectUri}${promptQuery}`;
+  return `${domain}/login?client_id=${clientId}&response_type=code&scope=${encodedScope}&redirect_uri=${redirectUri}`;
 }
 
 export function getCognitoPostLogoutRedirectUri() {
