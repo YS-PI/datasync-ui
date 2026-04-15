@@ -208,7 +208,29 @@ export function taskHasRecentErrors(task: DatasyncTask): boolean {
 }
 
 export function sortTasksByName(tasks: DatasyncTask[]): DatasyncTask[] {
-  return [...tasks].sort((a, b) => a.name.localeCompare(b.name));
+  const getTaskPriority = (task: DatasyncTask): number => {
+    const lastStatus = getExecutionDisplayStatus(task.last_exec);
+
+    if (lastStatus === 'ERROR') {
+      return 0;
+    }
+
+    if (taskHasRecentErrors(task)) {
+      return 1;
+    }
+
+    return 2;
+  };
+
+  return [...tasks].sort((a, b) => {
+    const priorityDiff = getTaskPriority(a) - getTaskPriority(b);
+
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export function getExecutionKey(execution: DatasyncExecution): string {
