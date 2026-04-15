@@ -31,7 +31,7 @@ export default function Page() {
     }
 
     if (!isLoading && !activeNavigator && signinRedirect) {
-      void signinRedirect();
+      void signinRedirect({ extraQueryParams: { prompt: 'login' } });
     }
   }, [activeNavigator, isAuthenticated, isLoading, router, signinRedirect]);
 

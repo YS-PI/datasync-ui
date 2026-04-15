@@ -13,7 +13,7 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const auth = useAuth();
-  const hostedLoginUrl = getCognitoHostedLoginUrl();
+  const hostedLoginUrl = getCognitoHostedLoginUrl(true);
 
   useEffect(() => {
     if (!isCognitoConfigured()) {

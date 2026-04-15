@@ -34,15 +34,16 @@ export function getCognitoHostedLogoutUrl(postLogoutRedirectUri = redirectSignOu
   return `${domain}/logout?client_id=${clientId}&logout_uri=${logoutUri}`;
 }
 
-export function getCognitoHostedLoginUrl() {
+export function getCognitoHostedLoginUrl(forcePromptLogin = false) {
   if (!hostedUiConfigured) {
     return '';
   }
 
   const redirectUri = encodeURIComponent(redirectSignIn);
   const encodedScope = encodeURIComponent(scope);
+  const promptQuery = forcePromptLogin ? '&prompt=login' : '';
 
-  return `${domain}/login?client_id=${clientId}&response_type=code&scope=${encodedScope}&redirect_uri=${redirectUri}`;
+  return `${domain}/login?client_id=${clientId}&response_type=code&scope=${encodedScope}&redirect_uri=${redirectUri}${promptQuery}`;
 }
 
 export function getCognitoPostLogoutRedirectUri() {
