@@ -852,18 +852,21 @@ export function OverviewAnalyticsView() {
           >
             <ButtonGroup size="small" variant="outlined">
               <Button
+                color="primary"
                 variant={logLevelFilter === 'ALL' ? 'contained' : 'outlined'}
                 onClick={() => setLogLevelFilter('ALL')}
               >
                 Todos ({logEventCounts.all})
               </Button>
               <Button
+                color="info"
                 variant={logLevelFilter === 'INFO' ? 'contained' : 'outlined'}
                 onClick={() => setLogLevelFilter('INFO')}
               >
                 INFO ({logEventCounts.info})
               </Button>
               <Button
+                color="error"
                 variant={logLevelFilter === 'ERROR' ? 'contained' : 'outlined'}
                 onClick={() => setLogLevelFilter('ERROR')}
               >
