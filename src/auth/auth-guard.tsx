@@ -12,12 +12,15 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const auth = useAuth();
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasOidcCallbackParams =
+    searchParams.has('state') && (searchParams.has('code') || searchParams.has('error'));
 
   if (!isCognitoConfigured()) {
     return <>{children}</>;
   }
 
-  if (auth.isLoading || auth.activeNavigator) {
+  if (auth.isLoading || auth.activeNavigator || hasOidcCallbackParams) {
     return (
       <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
         <CircularProgress />

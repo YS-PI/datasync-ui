@@ -10,7 +10,7 @@ const domain = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/+$/, '');
 const authority = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
 
 const redirectSignIn =
-  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN ?? `${window.location.origin}/auth/callback`;
+  import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN ?? `${window.location.origin}/`;
 
 const redirectSignOut =
   import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT ?? `${window.location.origin}/`;
