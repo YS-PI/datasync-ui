@@ -67,6 +67,8 @@ export function OverviewAnalyticsView() {
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
   const isDark = mode === 'dark';
+  const folderIconSrc = '/assets/aws/3643772-archive-archives-document-folder-open_113445.svg';
+  const s3IconSrc = '/assets/aws/amazon_s_icon_130997.svg';
 
   const [data, setData] = useState<DatasyncResponse | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | false>(false);
@@ -283,6 +285,147 @@ export function OverviewAnalyticsView() {
     );
   }, [logLevelFilter, selectedExecutionEvents]);
 
+  const renderTransferStatusIcon = (status: 'RUNNING' | 'SUCCESS' | 'ERROR', diskLabel: string) => {
+    const lineChannel =
+      status === 'RUNNING'
+        ? theme.vars.palette.info.mainChannel
+        : status === 'ERROR'
+          ? theme.vars.palette.error.mainChannel
+          : theme.vars.palette.success.mainChannel;
+
+    const lineColor = varAlpha(lineChannel, 0.48);
+
+    return (
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Box
+          sx={{
+            position: 'relative',
+            width: 94,
+            height: 36,
+            borderRadius: 1,
+            border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.25)}`,
+            bgcolor: isDark
+              ? varAlpha(theme.vars.palette.grey['900Channel'], 0.62)
+              : varAlpha(theme.vars.palette.common.whiteChannel, 0.75),
+          }}
+        >
+          <Box
+            component="img"
+            src={folderIconSrc}
+            alt="Carpeta origen"
+            sx={{
+              position: 'absolute',
+              left: 6,
+              top: 6,
+              width: 24,
+              height: 24,
+              objectFit: 'contain',
+            }}
+          />
+
+          <Box
+            component="img"
+            src={s3IconSrc}
+            alt="Bucket S3 destino"
+            sx={{
+              position: 'absolute',
+              right: 6,
+              top: 6,
+              width: 24,
+              height: 24,
+              objectFit: 'contain',
+            }}
+          />
+
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 31,
+              right: 31,
+              top: 17,
+              height: 2,
+              borderRadius: 999,
+              bgcolor: lineColor,
+            }}
+          />
+
+          {status === 'RUNNING' ? (
+            <>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: 31,
+                  top: 14,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: 'info.main',
+                  boxShadow: `0 0 0 4px ${varAlpha(theme.vars.palette.info.mainChannel, 0.22)}`,
+                  animation: 'datasync-transfer-flow 1.1s ease-in-out infinite',
+                  '@keyframes datasync-transfer-flow': {
+                    '0%': { transform: 'translateX(0)', opacity: 0.3 },
+                    '45%': { opacity: 1 },
+                    '100%': { transform: 'translateX(24px)', opacity: 0.3 },
+                  },
+                }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: 44,
+                  top: 7,
+                  px: 0.5,
+                  borderRadius: 999,
+                  fontSize: 9,
+                  lineHeight: '12px',
+                  fontWeight: 700,
+                  color: 'info.dark',
+                  bgcolor: varAlpha(theme.vars.palette.info.mainChannel, 0.2),
+                }}
+              >
+                SYNC
+              </Box>
+            </>
+          ) : (
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '50%',
+                top: 8,
+                transform: 'translateX(-50%)',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 9,
+                fontWeight: 800,
+                color: 'common.white',
+                bgcolor: status === 'ERROR' ? 'error.main' : 'success.main',
+                boxShadow: `0 0 0 2px ${isDark ? theme.vars.palette.grey[800] : theme.vars.palette.common.white}`,
+              }}
+            >
+              {status === 'ERROR' ? 'ERR' : 'OK'}
+            </Box>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            minWidth: 34,
+            height: 34,
+            borderRadius: 1,
+            display: 'grid',
+            placeItems: 'center',
+            border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.3)}`,
+          }}
+        >
+          <Typography variant="subtitle2">{diskLabel}</Typography>
+        </Box>
+      </Stack>
+    );
+  };
+
   const renderTaskRow = (task: DatasyncTask) => {
     const hasRecentErrors = taskHasRecentErrors(task);
     const isExpanded = expandedTask === task.name;
@@ -358,18 +501,7 @@ export function OverviewAnalyticsView() {
           <Grid container spacing={2} alignItems="center">
             <Grid size={{ xs: 12, md: 3 }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Box
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 1,
-                    display: 'grid',
-                    placeItems: 'center',
-                    border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.3)}`,
-                  }}
-                >
-                  <Typography variant="subtitle2">{task.disco}</Typography>
-                </Box>
+                {renderTransferStatusIcon(lastExecDisplayStatus, task.disco)}
                 <Box>
                   <Typography variant="subtitle1">{task.name}</Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
