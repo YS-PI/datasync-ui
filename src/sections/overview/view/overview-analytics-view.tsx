@@ -68,7 +68,9 @@ export function OverviewAnalyticsView() {
   const { mode, setMode } = useColorScheme();
   const isDark = mode === 'dark';
   const folderIconSrc = '/assets/aws/3643772-archive-archives-document-folder-open_113445.svg';
-  const s3IconSrc = '/assets/aws/amazon_s_icon_130997.svg';
+  const s3IconSrc = isDark
+    ? '/assets/aws/amazon_s_icon_130997-transparent.svg'
+    : '/assets/aws/amazon_s_icon_130997.svg';
 
   const [data, setData] = useState<DatasyncResponse | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | false>(false);
@@ -293,15 +295,15 @@ export function OverviewAnalyticsView() {
           ? theme.vars.palette.error.mainChannel
           : theme.vars.palette.success.mainChannel;
 
-    const lineColor = varAlpha(lineChannel, 0.48);
+    const lineColor = varAlpha(lineChannel, status === 'RUNNING' ? 0.3 : 0.48);
 
     return (
       <Stack direction="row" spacing={1} alignItems="center">
         <Box
           sx={{
             position: 'relative',
-            width: 94,
-            height: 36,
+            width: 128,
+            height: 48,
             borderRadius: 1,
             border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.25)}`,
             bgcolor: isDark
@@ -315,11 +317,12 @@ export function OverviewAnalyticsView() {
             alt="Carpeta origen"
             sx={{
               position: 'absolute',
-              left: 6,
-              top: 6,
-              width: 24,
-              height: 24,
+              left: 8,
+              top: 8,
+              width: 32,
+              height: 32,
               objectFit: 'contain',
+              filter: isDark ? 'brightness(0) invert(1)' : 'none',
             }}
           />
 
@@ -329,10 +332,10 @@ export function OverviewAnalyticsView() {
             alt="Bucket S3 destino"
             sx={{
               position: 'absolute',
-              right: 6,
-              top: 6,
-              width: 24,
-              height: 24,
+              right: 4,
+              top: 4,
+              width: 40,
+              height: 40,
               objectFit: 'contain',
             }}
           />
@@ -340,87 +343,81 @@ export function OverviewAnalyticsView() {
           <Box
             sx={{
               position: 'absolute',
-              left: 31,
-              right: 31,
-              top: 17,
-              height: 2,
+              left: 46,
+              right: 46,
+              top: 23,
+              height: 3,
               borderRadius: 999,
               bgcolor: lineColor,
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                right: -6,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 0,
+                height: 0,
+                borderTop: '5px solid transparent',
+                borderBottom: '5px solid transparent',
+                borderLeft: `7px solid ${lineColor}`,
+              },
             }}
           />
 
           {status === 'RUNNING' ? (
-            <>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  left: 31,
-                  top: 14,
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: 'info.main',
-                  boxShadow: `0 0 0 4px ${varAlpha(theme.vars.palette.info.mainChannel, 0.22)}`,
-                  animation: 'datasync-transfer-flow 1.1s ease-in-out infinite',
-                  '@keyframes datasync-transfer-flow': {
-                    '0%': { transform: 'translateX(0)', opacity: 0.3 },
-                    '45%': { opacity: 1 },
-                    '100%': { transform: 'translateX(24px)', opacity: 0.3 },
-                  },
-                }}
-              />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  left: 44,
-                  top: 7,
-                  px: 0.5,
-                  borderRadius: 999,
-                  fontSize: 9,
-                  lineHeight: '12px',
-                  fontWeight: 700,
-                  color: 'info.dark',
-                  bgcolor: varAlpha(theme.vars.palette.info.mainChannel, 0.2),
-                }}
-              >
-                SYNC
-              </Box>
-            </>
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 46,
+                top: 18,
+                width: 9,
+                height: 9,
+                borderRadius: '50%',
+                bgcolor: 'info.main',
+                boxShadow: `0 0 0 4px ${varAlpha(theme.vars.palette.info.mainChannel, 0.22)}`,
+                animation: 'datasync-transfer-flow 1.1s ease-in-out infinite',
+                '@keyframes datasync-transfer-flow': {
+                  '0%': { transform: 'translateX(0)', opacity: 0.3 },
+                  '45%': { opacity: 1 },
+                  '100%': { transform: 'translateX(30px)', opacity: 0.3 },
+                },
+              }}
+            />
           ) : (
             <Box
               sx={{
                 position: 'absolute',
-                left: '50%',
-                top: 8,
-                transform: 'translateX(-50%)',
-                width: 20,
-                height: 20,
+                left: 20,
+                top: 28,
+                width: 16,
+                height: 16,
                 borderRadius: '50%',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: 9,
-                fontWeight: 800,
+                fontSize: 12,
+                fontWeight: 700,
+                lineHeight: 1,
                 color: 'common.white',
                 bgcolor: status === 'ERROR' ? 'error.main' : 'success.main',
                 boxShadow: `0 0 0 2px ${isDark ? theme.vars.palette.grey[800] : theme.vars.palette.common.white}`,
               }}
             >
-              {status === 'ERROR' ? 'ERR' : 'OK'}
+              {status === 'ERROR' ? '×' : '✓'}
             </Box>
           )}
         </Box>
 
         <Box
           sx={{
-            minWidth: 34,
-            height: 34,
+            minWidth: 42,
+            height: 42,
             borderRadius: 1,
             display: 'grid',
             placeItems: 'center',
             border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.3)}`,
           }}
         >
-          <Typography variant="subtitle2">{diskLabel}</Typography>
+          <Typography variant="subtitle1">{diskLabel}</Typography>
         </Box>
       </Stack>
     );
@@ -499,7 +496,7 @@ export function OverviewAnalyticsView() {
           </Stack>
 
           <Grid container spacing={2} alignItems="center">
-            <Grid size={{ xs: 12, md: 3 }}>
+            <Grid size={{ xs: 12, md: 3.5 }}>
               <Stack direction="row" spacing={1} alignItems="center">
                 {renderTransferStatusIcon(lastExecDisplayStatus, task.disco)}
                 <Box>
@@ -511,7 +508,7 @@ export function OverviewAnalyticsView() {
               </Stack>
             </Grid>
 
-            <Grid size={{ xs: 6, md: 1.5 }}>
+            <Grid size={{ xs: 6, md: 1.25 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Estado
               </Typography>
@@ -529,7 +526,7 @@ export function OverviewAnalyticsView() {
               <Typography variant="body2">{task.last_exec.start_time}</Typography>
             </Grid>
 
-            <Grid size={{ xs: 6, md: 1.5 }}>
+            <Grid size={{ xs: 6, md: 1.25 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Transferido
               </Typography>
