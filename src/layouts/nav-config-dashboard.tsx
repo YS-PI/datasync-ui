@@ -20,6 +20,21 @@ export const navData = [
   {
     title: 'Oracle',
     path: '/oracle',
-    icon: icon('ic-user'),
+    icon: icon('ic-analytics'),
+  },
+  {
+    title: 'SIMA',
+    path: '/sima',
+    icon: icon('ic-analytics'),
+  },
+  {
+    title: 'GLPI',
+    path: '/glpi',
+    icon: icon('ic-analytics'),
+  },
+  {
+    title: 'Aula Virtual',
+    path: '/aulavirtual',
+    icon: icon('ic-analytics'),
   },
 ];

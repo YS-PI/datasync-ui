@@ -149,6 +149,13 @@ export function getValidationMessage(task: DatasyncTask): {
   severity: AlertColor;
   message: string;
 } {
+  if (task.last_exec.status === 'NO_EXECUTIONS') {
+    return {
+      severity: 'info',
+      message: 'Esta tarea aun no tiene ejecuciones registradas en DataSync.',
+    };
+  }
+
   if (task.last_exec.error) {
     return {
       severity: 'error',
@@ -174,6 +181,10 @@ export function getValidationMessage(task: DatasyncTask): {
 export function getStatusChipColor(status: string): ChipProps['color'] {
   if (status === 'RUNNING') {
     return 'info';
+  }
+
+  if (status === 'NO_EXECUTIONS') {
+    return 'default';
   }
 
   if (status === 'SUCCESS') {
@@ -245,7 +256,11 @@ export function isExecutionRunning(execution: DatasyncExecution): boolean {
 
 export function getExecutionDisplayStatus(
   execution: DatasyncExecution
-): 'RUNNING' | 'SUCCESS' | 'ERROR' {
+): 'RUNNING' | 'SUCCESS' | 'ERROR' | 'NO_EXECUTIONS' {
+  if (execution.status === 'NO_EXECUTIONS') {
+    return 'NO_EXECUTIONS';
+  }
+
   if (isExecutionRunning(execution)) {
     return 'RUNNING';
   }
@@ -260,6 +275,10 @@ export function getExecutionDisplayStatus(
 export function getExecutionStatusLabelEs(status: string): string {
   if (status === 'RUNNING') {
     return 'RUNNING';
+  }
+
+  if (status === 'NO_EXECUTIONS') {
+    return 'Sin ejecuciones';
   }
 
   if (status === 'SUCCESS') {

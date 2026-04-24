@@ -1,6 +1,6 @@
-export type DatasyncExecStatus = 'SUCCESS' | 'ERROR' | 'RUNNING' | string;
+export type DatasyncExecStatus = 'SUCCESS' | 'ERROR' | 'RUNNING' | 'NO_EXECUTIONS' | string;
 
-export type DatasyncModule = 'APPROD' | 'ORACLE';
+export type DatasyncModule = 'APPROD' | 'ORACLE' | 'SIMA' | 'GLPI' | 'AULAVIRTUAL';
 
 export type DatasyncCloudwatchEvent = {
   timestamp: string;

@@ -67,6 +67,22 @@ const AUTO_REFRESH_MS = 5 * 60 * 60 * 1000;
 let datasyncResponseCache: DatasyncResponse | null = null;
 let datasyncFetchPromise: Promise<DatasyncResponse> | null = null;
 
+const DATASYNC_MODULE_LABELS: Record<DatasyncModule, string> = {
+  APPROD: 'APPROD',
+  ORACLE: 'Oracle',
+  SIMA: 'SIMA',
+  GLPI: 'GLPI',
+  AULAVIRTUAL: 'Aula Virtual',
+};
+
+const DATASYNC_MODULES = new Set<DatasyncModule>([
+  'APPROD',
+  'ORACLE',
+  'SIMA',
+  'GLPI',
+  'AULAVIRTUAL',
+]);
+
 type LogLevelFilter = 'ALL' | 'INFO' | 'ERROR';
 
 type OverviewAnalyticsViewProps = {
@@ -75,16 +91,26 @@ type OverviewAnalyticsViewProps = {
 
 function resolveTaskModule(task: DatasyncTask): DatasyncModule {
   const moduleValue = task.module?.toString().toUpperCase();
+  const taskName = task.name.toUpperCase();
+  const diskValue = task.disco?.toString().toUpperCase();
 
-  if (moduleValue === 'ORACLE') {
-    return 'ORACLE';
+  if (DATASYNC_MODULES.has(moduleValue as DatasyncModule)) {
+    return moduleValue as DatasyncModule;
   }
 
-  if (moduleValue === 'APPROD') {
-    return 'APPROD';
+  if (diskValue === 'SIMA' || taskName.includes('SIMA')) {
+    return 'SIMA';
   }
 
-  return task.name.toUpperCase().includes('ORACLE') ? 'ORACLE' : 'APPROD';
+  if (diskValue === 'GLPI' || taskName.includes('GLPI')) {
+    return 'GLPI';
+  }
+
+  if (diskValue === 'AULAVIRTUAL' || taskName.includes('AULAVIRTUAL')) {
+    return 'AULAVIRTUAL';
+  }
+
+  return taskName.includes('ORACLE') ? 'ORACLE' : 'APPROD';
 }
 
 function mapResponseByModule(
@@ -211,7 +237,8 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
     [moduleFilter]
   );
 
-  const moduleLabel = moduleFilter ? (moduleFilter === 'ORACLE' ? 'Oracle' : 'APPROD') : 'DataSync';
+  const moduleLabel = moduleFilter ? DATASYNC_MODULE_LABELS[moduleFilter] : 'DataSync';
+  const summaryTitle = moduleFilter === 'APPROD' ? 'Discos monitoreados' : 'Tareas monitoreadas';
 
   useEffect(() => {
     void fetchData();
@@ -357,7 +384,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
   }, [logLevelFilter, selectedExecutionEvents]);
 
   const renderTransferStatusIcon = (
-    status: 'RUNNING' | 'SUCCESS' | 'ERROR',
+    status: 'RUNNING' | 'SUCCESS' | 'ERROR' | 'NO_EXECUTIONS',
     diskLabel?: string
   ) => {
     const lineChannel =
@@ -365,7 +392,9 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
         ? theme.vars.palette.info.mainChannel
         : status === 'ERROR'
           ? theme.vars.palette.error.mainChannel
-          : theme.vars.palette.success.mainChannel;
+          : status === 'NO_EXECUTIONS'
+            ? theme.vars.palette.grey['500Channel']
+            : theme.vars.palette.success.mainChannel;
 
     const lineColor = varAlpha(lineChannel, status === 'RUNNING' ? 0.3 : 0.48);
 
@@ -470,11 +499,16 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                 fontWeight: 700,
                 lineHeight: 1,
                 color: 'common.white',
-                bgcolor: status === 'ERROR' ? 'error.main' : 'success.main',
+                bgcolor:
+                  status === 'ERROR'
+                    ? 'error.main'
+                    : status === 'NO_EXECUTIONS'
+                      ? 'text.disabled'
+                      : 'success.main',
                 boxShadow: `0 0 0 2px ${isDark ? theme.vars.palette.grey[800] : theme.vars.palette.common.white}`,
               }}
             >
-              {status === 'ERROR' ? '×' : '✓'}
+              {status === 'ERROR' ? '×' : status === 'NO_EXECUTIONS' ? '-' : '✓'}
             </Box>
           )}
         </Box>
@@ -500,6 +534,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
   const renderTaskRow = (task: DatasyncTask) => {
     const taskModule = resolveTaskModule(task);
     const isApprodTask = taskModule === 'APPROD';
+    const isOracleTask = taskModule === 'ORACLE';
     const hasRecentErrors = taskHasRecentErrors(task);
     const isExpanded = expandedTask === task.name;
     const validation = getValidationMessage(task);
@@ -507,9 +542,12 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
     const lastExecDisplayStatus = getExecutionDisplayStatus(task.last_exec);
     const isCurrentRunning =
       lastExecDisplayStatus === 'RUNNING' || task.task_status.toUpperCase() === 'RUNNING';
+    const hasNoExecutions = lastExecDisplayStatus === 'NO_EXECUTIONS';
     const isCurrentError = lastExecDisplayStatus === 'ERROR' && !isCurrentRunning;
     const borderStatusColor = isCurrentRunning
       ? theme.vars.palette.info.main
+      : hasNoExecutions
+        ? theme.vars.palette.grey[500]
       : isCurrentError
         ? theme.vars.palette.error.main
         : theme.vars.palette.success.main;
@@ -554,7 +592,13 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                 color={isCurrentRunning ? 'info' : isCurrentError ? 'error' : 'success'}
                 variant="soft"
               >
-                {isCurrentRunning ? 'En curso' : isCurrentError ? 'En error' : 'Operacion estable'}
+                {isCurrentRunning
+                  ? 'En curso'
+                  : hasNoExecutions
+                    ? 'Sin ejecuciones'
+                    : isCurrentError
+                      ? 'En error'
+                      : 'Operacion estable'}
               </Label>
               {hasRecentErrors && !isCurrentError && (
                 <Label color="warning" variant="soft">
@@ -581,7 +625,11 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                 <Box>
                   <Typography variant="subtitle1">{task.name}</Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {isApprodTask ? `${task.gb} GB · Snapshot ${task.snapshot}` : 'Respaldo Oracle'}
+                    {isApprodTask
+                      ? `${task.gb} GB · Snapshot ${task.snapshot}`
+                      : isOracleTask
+                        ? 'Respaldo Oracle'
+                        : `Backup ${DATASYNC_MODULE_LABELS[taskModule]}`}
                   </Typography>
                 </Box>
               </Stack>
@@ -750,7 +798,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                         ARN ejecucion
                       </Typography>
                       <Typography variant="body2" sx={{ textAlign: 'right' }}>
-                        {task.last_exec.arn}
+                        {task.last_exec.arn || '—'}
                       </Typography>
                     </Box>
                   </Stack>
@@ -785,6 +833,13 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                       </TableHead>
 
                       <TableBody>
+                        {!task.history.length && (
+                          <TableRow>
+                            <TableCell colSpan={10} sx={{ color: 'text.secondary' }}>
+                              Esta tarea aun no tiene ejecuciones registradas en DataSync.
+                            </TableCell>
+                          </TableRow>
+                        )}
                         {task.history.flatMap((execution) => {
                           const executionKey = getExecutionKey(execution);
                           const rows = [
@@ -955,7 +1010,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
                 <AnalyticsWidgetSummary
-                  title={moduleFilter === 'ORACLE' ? 'Tareas monitoreadas' : 'Discos monitoreados'}
+                  title={summaryTitle}
                   total={summary?.monitoredDisks ?? 0}
                   showTrending={false}
                   showChart={false}
