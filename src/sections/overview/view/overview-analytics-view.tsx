@@ -11,6 +11,7 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
+import Skeleton from '@mui/material/Skeleton';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -52,18 +53,93 @@ import {
   formatTransferredWithSource,
 } from '../datasync-format';
 
-import type { DatasyncTask, DatasyncResponse, DatasyncExecution } from '../datasync-types';
+import type {
+  DatasyncTask,
+  DatasyncModule,
+  DatasyncResponse,
+  DatasyncExecution,
+} from '../datasync-types';
 
 const DATASYNC_API_URL =
   import.meta.env.VITE_DATASYNC_API_URL ??
   'https://kyk7nif0tj.execute-api.us-east-1.amazonaws.com/';
 const AUTO_REFRESH_MS = 5 * 60 * 60 * 1000;
+let datasyncResponseCache: DatasyncResponse | null = null;
+let datasyncFetchPromise: Promise<DatasyncResponse> | null = null;
 
 type LogLevelFilter = 'ALL' | 'INFO' | 'ERROR';
 
+type OverviewAnalyticsViewProps = {
+  moduleFilter?: DatasyncModule;
+};
+
+function resolveTaskModule(task: DatasyncTask): DatasyncModule {
+  const moduleValue = task.module?.toString().toUpperCase();
+
+  if (moduleValue === 'ORACLE') {
+    return 'ORACLE';
+  }
+
+  if (moduleValue === 'APPROD') {
+    return 'APPROD';
+  }
+
+  return task.name.toUpperCase().includes('ORACLE') ? 'ORACLE' : 'APPROD';
+}
+
+function mapResponseByModule(
+  payload: DatasyncResponse,
+  moduleFilter?: DatasyncModule
+): DatasyncResponse {
+  const tasksByModule = moduleFilter
+    ? payload.tasks.filter((task) => resolveTaskModule(task) === moduleFilter)
+    : payload.tasks;
+
+  return { ...payload, tasks: sortTasksByName(tasksByModule) };
+}
+
+async function fetchDatasyncResponse(forceRefresh = false): Promise<DatasyncResponse> {
+  if (!forceRefresh && datasyncResponseCache) {
+    return datasyncResponseCache;
+  }
+
+  if (!forceRefresh && datasyncFetchPromise) {
+    return datasyncFetchPromise;
+  }
+
+  datasyncFetchPromise = (async () => {
+    const response = await fetch(DATASYNC_API_URL, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`La API respondio con estado ${response.status}`);
+    }
+
+    const payload = (await response.json()) as unknown;
+
+    if (!isDatasyncResponse(payload)) {
+      throw new Error('El payload recibido no coincide con el formato esperado');
+    }
+
+    datasyncResponseCache = payload;
+
+    return payload;
+  })();
+
+  try {
+    return await datasyncFetchPromise;
+  } finally {
+    datasyncFetchPromise = null;
+  }
+}
+
 // ----------------------------------------------------------------------
 
-export function OverviewAnalyticsView() {
+export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewProps) {
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
   const isDark = mode === 'dark';
@@ -72,9 +148,11 @@ export function OverviewAnalyticsView() {
     ? '/assets/aws/amazon_s_icon_130997-transparent.svg'
     : '/assets/aws/amazon_s_icon_130997.svg';
 
-  const [data, setData] = useState<DatasyncResponse | null>(null);
+  const [data, setData] = useState<DatasyncResponse | null>(() =>
+    datasyncResponseCache ? mapResponseByModule(datasyncResponseCache, moduleFilter) : null
+  );
   const [expandedTask, setExpandedTask] = useState<string | false>(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!datasyncResponseCache);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [translatedErrors, setTranslatedErrors] = useState<Record<string, boolean>>({});
@@ -85,64 +163,55 @@ export function OverviewAnalyticsView() {
   } | null>(null);
   const hasInitializedExpandedTaskRef = useRef(false);
 
-  const fetchData = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) {
-      setIsRefreshing(true);
-    }
-
-    try {
-      const response = await fetch(DATASYNC_API_URL, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`La API respondio con estado ${response.status}`);
-      }
-
-      const payload = (await response.json()) as unknown;
-
-      if (!isDatasyncResponse(payload)) {
-        throw new Error('El payload recibido no coincide con el formato esperado');
-      }
-
-      const sortedTasks = sortTasksByName(payload.tasks);
-
-      setData({ ...payload, tasks: sortedTasks });
-      setError(null);
-
-      setExpandedTask((current) => {
-        if (!hasInitializedExpandedTaskRef.current) {
-          hasInitializedExpandedTaskRef.current = true;
-          return false;
-        }
-
-        if (sortedTasks.length === 0) {
-          return false;
-        }
-
-        if (current === false) {
-          return false;
-        }
-
-        if (sortedTasks.some((task) => task.name === current)) {
-          return current;
-        }
-
-        return sortedTasks[0]?.name ?? false;
-      });
-    } catch (fetchError) {
-      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Error no controlado';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+  const fetchData = useCallback(
+    async (isManualRefresh = false) => {
       if (isManualRefresh) {
-        setIsRefreshing(false);
+        setIsRefreshing(true);
       }
-    }
-  }, []);
+
+      try {
+        const payload = await fetchDatasyncResponse(isManualRefresh);
+        const scopedPayload = mapResponseByModule(payload, moduleFilter);
+        const sortedTasks = scopedPayload.tasks;
+
+        setData(scopedPayload);
+        setError(null);
+
+        setExpandedTask((current) => {
+          if (!hasInitializedExpandedTaskRef.current) {
+            hasInitializedExpandedTaskRef.current = true;
+            return false;
+          }
+
+          if (sortedTasks.length === 0) {
+            return false;
+          }
+
+          if (current === false) {
+            return false;
+          }
+
+          if (sortedTasks.some((task) => task.name === current)) {
+            return current;
+          }
+
+          return sortedTasks[0]?.name ?? false;
+        });
+      } catch (fetchError) {
+        const errorMessage =
+          fetchError instanceof Error ? fetchError.message : 'Error no controlado';
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+        if (isManualRefresh) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [moduleFilter]
+  );
+
+  const moduleLabel = moduleFilter ? (moduleFilter === 'ORACLE' ? 'Oracle' : 'APPROD') : 'DataSync';
 
   useEffect(() => {
     void fetchData();
@@ -287,7 +356,10 @@ export function OverviewAnalyticsView() {
     );
   }, [logLevelFilter, selectedExecutionEvents]);
 
-  const renderTransferStatusIcon = (status: 'RUNNING' | 'SUCCESS' | 'ERROR', diskLabel: string) => {
+  const renderTransferStatusIcon = (
+    status: 'RUNNING' | 'SUCCESS' | 'ERROR',
+    diskLabel?: string
+  ) => {
     const lineChannel =
       status === 'RUNNING'
         ? theme.vars.palette.info.mainChannel
@@ -407,23 +479,27 @@ export function OverviewAnalyticsView() {
           )}
         </Box>
 
-        <Box
-          sx={{
-            minWidth: 42,
-            height: 42,
-            borderRadius: 1,
-            display: 'grid',
-            placeItems: 'center',
-            border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.3)}`,
-          }}
-        >
-          <Typography variant="subtitle1">{diskLabel}</Typography>
-        </Box>
+        {diskLabel && (
+          <Box
+            sx={{
+              minWidth: 42,
+              height: 42,
+              borderRadius: 1,
+              display: 'grid',
+              placeItems: 'center',
+              border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.3)}`,
+            }}
+          >
+            <Typography variant="subtitle1">{diskLabel}</Typography>
+          </Box>
+        )}
       </Stack>
     );
   };
 
   const renderTaskRow = (task: DatasyncTask) => {
+    const taskModule = resolveTaskModule(task);
+    const isApprodTask = taskModule === 'APPROD';
     const hasRecentErrors = taskHasRecentErrors(task);
     const isExpanded = expandedTask === task.name;
     const validation = getValidationMessage(task);
@@ -498,11 +574,14 @@ export function OverviewAnalyticsView() {
           <Grid container spacing={2} alignItems="center">
             <Grid size={{ xs: 12, md: 3.5 }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                {renderTransferStatusIcon(lastExecDisplayStatus, task.disco)}
+                {renderTransferStatusIcon(
+                  lastExecDisplayStatus,
+                  isApprodTask ? task.disco : undefined
+                )}
                 <Box>
                   <Typography variant="subtitle1">{task.name}</Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {task.gb} GB · Snapshot {task.snapshot}
+                    {isApprodTask ? `${task.gb} GB · Snapshot ${task.snapshot}` : 'Respaldo Oracle'}
                   </Typography>
                 </Box>
               </Stack>
@@ -577,44 +656,48 @@ export function OverviewAnalyticsView() {
                   </Typography>
 
                   <Stack spacing={1.2}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Script Windows
-                      </Typography>
-                      <Typography variant="body2">{task.schedule.script}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        DataSync
-                      </Typography>
-                      <Typography variant="body2">{task.schedule.datasync}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Cron AWS
-                      </Typography>
-                      <Typography variant="body2">{task.schedule.cron}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Proxima ejecucion
-                      </Typography>
-                      <Typography variant="body2" sx={{ textAlign: 'right' }}>
-                        {formatNextExecution(task.schedule.datasync)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Snapshot estimado
-                      </Typography>
-                      <Typography variant="body2">{task.snapshot}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Capacidad disco
-                      </Typography>
-                      <Typography variant="body2">{task.gb} GB</Typography>
-                    </Box>
+                    {isApprodTask && (
+                      <>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Script Windows
+                          </Typography>
+                          <Typography variant="body2">{task.schedule.script}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            DataSync
+                          </Typography>
+                          <Typography variant="body2">{task.schedule.datasync}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Cron AWS
+                          </Typography>
+                          <Typography variant="body2">{task.schedule.cron}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Proxima ejecucion
+                          </Typography>
+                          <Typography variant="body2" sx={{ textAlign: 'right' }}>
+                            {formatNextExecution(task.schedule.datasync)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Snapshot estimado
+                          </Typography>
+                          <Typography variant="body2">{task.snapshot}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Capacidad disco
+                          </Typography>
+                          <Typography variant="body2">{task.gb} GB</Typography>
+                        </Box>
+                      </>
+                    )}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         Duracion ultima ejec.
@@ -803,7 +886,7 @@ export function OverviewAnalyticsView() {
             }}
           >
             <Box sx={{ minWidth: 320 }}>
-              <Typography variant="h4">BKSync Dashboard</Typography>
+              <Typography variant="h4">BKSync Dashboard - {moduleLabel}</Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                 Monitoreo y validación de transferencias de archivos.
               </Typography>
@@ -866,13 +949,13 @@ export function OverviewAnalyticsView() {
         {!!error && <Alert severity="error">No se pudo cargar el dashboard: {error}</Alert>}
 
         {isLoading && !data ? (
-          <Alert severity="info">Cargando datos de DataSync...</Alert>
+          <OverviewLoadingSkeleton />
         ) : (
           <>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
                 <AnalyticsWidgetSummary
-                  title="Discos monitoreados"
+                  title={moduleFilter === 'ORACLE' ? 'Tareas monitoreadas' : 'Discos monitoreados'}
                   total={summary?.monitoredDisks ?? 0}
                   showTrending={false}
                   showChart={false}
@@ -930,7 +1013,7 @@ export function OverviewAnalyticsView() {
 
             <Box>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                Tareas DataSync
+                Tareas {moduleLabel}
               </Typography>
               <Typography
                 variant="caption"
@@ -1081,5 +1164,38 @@ export function OverviewAnalyticsView() {
         </DialogActions>
       </Dialog>
     </DashboardContent>
+  );
+}
+
+function OverviewLoadingSkeleton() {
+  return (
+    <Stack spacing={2}>
+      <Grid container spacing={2}>
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <Grid key={`summary-skeleton-${idx}`} size={{ xs: 12, sm: 6, lg: 2.4 }}>
+            <Card>
+              <CardContent>
+                <Skeleton variant="text" width="60%" height={20} />
+                <Skeleton variant="text" width="40%" height={36} />
+                <Skeleton variant="rounded" height={28} sx={{ mt: 1 }} />
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width={160} height={28} />
+          <Skeleton variant="text" width={280} height={20} sx={{ mb: 2 }} />
+
+          <Stack spacing={1.5}>
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <Skeleton key={`task-skeleton-${idx}`} variant="rounded" height={96} />
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
   );
 }

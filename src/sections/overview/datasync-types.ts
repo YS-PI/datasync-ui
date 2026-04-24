@@ -1,5 +1,7 @@
 export type DatasyncExecStatus = 'SUCCESS' | 'ERROR' | 'RUNNING' | string;
 
+export type DatasyncModule = 'APPROD' | 'ORACLE';
+
 export type DatasyncCloudwatchEvent = {
   timestamp: string;
   message: string;
@@ -41,6 +43,7 @@ export type DatasyncSchedule = {
 
 export type DatasyncTask = {
   name: string;
+  module?: DatasyncModule | string;
   disco: string;
   gb: number;
   snapshot: string;

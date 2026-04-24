@@ -13,7 +13,8 @@ import { DashboardLayout } from 'src/layouts/dashboard';
 
 // ----------------------------------------------------------------------
 
-export const DashboardPage = lazy(() => import('src/pages/dashboard'));
+export const ApprodPage = lazy(() => import('../pages/approd'));
+export const OraclePage = lazy(() => import('../pages/oracle'));
 export const BlogPage = lazy(() => import('src/pages/blog'));
 export const UserPage = lazy(() => import('src/pages/user'));
 export const SignInPage = lazy(() => import('src/pages/sign-in'));
@@ -53,7 +54,9 @@ export const routesSection: RouteObject[] = [
       </AuthGuard>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <Navigate to="/approd" replace /> },
+      { path: 'approd', element: <ApprodPage /> },
+      { path: 'oracle', element: <OraclePage /> },
       { path: 'user', element: <UserPage /> },
       { path: 'products', element: <ProductsPage /> },
       { path: 'blog', element: <BlogPage /> },

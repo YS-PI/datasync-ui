@@ -1,16 +1,20 @@
 import type { Breakpoint } from '@mui/material/styles';
 
 import { merge } from 'es-toolkit';
+import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 
-import { _account } from '../nav-config-account';
+import { NavMobile, NavDesktop } from './nav';
 import { dashboardLayoutVars } from './css-vars';
+import { _account } from '../nav-config-account';
+import { navData } from '../nav-config-dashboard';
 import { MainSection } from '../core/main-section';
 import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
+import { MenuButton } from '../components/menu-button';
 import { AccountPopover } from '../components/account-popover';
 
 import type { MainSectionProps } from '../core/main-section';
@@ -37,8 +41,23 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const theme = useTheme();
+  const [openNav, setOpenNav] = useState(false);
+
+  const handleOpenNav = useCallback(() => {
+    setOpenNav(true);
+  }, []);
+
+  const handleCloseNav = useCallback(() => {
+    setOpenNav(false);
+  }, []);
 
   const renderHeader = () => {
+    const headerSx = Array.isArray(slotProps?.header?.sx)
+      ? slotProps.header.sx
+      : slotProps?.header?.sx
+        ? [slotProps.header.sx]
+        : [];
+
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: {
         maxWidth: false,
@@ -51,7 +70,15 @@ export function DashboardLayout({
           This is an info Alert.
         </Alert>
       ),
-      leftArea: null,
+      leftArea: (
+        <MenuButton
+          onClick={handleOpenNav}
+          sx={{
+            mr: 1,
+            display: { [layoutQuery]: 'none' },
+          }}
+        />
+      ),
       rightArea: (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
           {/** @slot Account drawer */}
@@ -67,14 +94,40 @@ export function DashboardLayout({
         {...slotProps?.header}
         slots={{ ...headerSlots, ...slotProps?.header?.slots }}
         slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-        sx={slotProps?.header?.sx}
+        sx={[
+          (themeValue) => ({
+            [themeValue.breakpoints.up(layoutQuery)]: {
+              width: 'calc(100% - var(--layout-nav-vertical-width))',
+              ml: 'var(--layout-nav-vertical-width)',
+            },
+          }),
+          ...headerSx,
+        ]}
       />
     );
   };
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection
+      {...slotProps?.main}
+      sx={[
+        (themeValue) => ({
+          [themeValue.breakpoints.up(layoutQuery)]: {
+            pl: 'var(--layout-nav-vertical-width)',
+          },
+        }),
+        ...(Array.isArray(slotProps?.main?.sx)
+          ? slotProps.main.sx
+          : slotProps?.main?.sx
+            ? [slotProps.main.sx]
+            : []),
+      ]}
+    >
+      {children}
+    </MainSection>
+  );
 
   return (
     <LayoutSection
@@ -86,6 +139,12 @@ export function DashboardLayout({
        * @Footer
        *************************************** */
       footerSection={renderFooter()}
+      sidebarSection={
+        <>
+          <NavDesktop data={navData} layoutQuery={layoutQuery} />
+          <NavMobile data={navData} open={openNav} onClose={handleCloseNav} />
+        </>
+      }
       /** **************************************
        * @Styles
        *************************************** */

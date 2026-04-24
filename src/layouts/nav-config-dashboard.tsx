@@ -13,8 +13,13 @@ export type NavItem = {
 
 export const navData = [
   {
-    title: 'DataSync',
-    path: '/',
+    title: 'APPROD',
+    path: '/approd',
     icon: icon('ic-analytics'),
+  },
+  {
+    title: 'Oracle',
+    path: '/oracle',
+    icon: icon('ic-user'),
   },
 ];
