@@ -70,7 +70,7 @@ export function formatStorageFromBytes(value: number): string {
 }
 
 export function formatThroughput(value: number): string {
-  return `${fNumber(value)} MB/s`;
+  return `${fNumber(value)} MiB/s`;
 }
 
 export function formatFileThroughput(value: number): string {

@@ -765,7 +765,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Vel. datos (MB/s)
+                        Vel. datos (MiB/s)
                       </Typography>
                       <Typography variant="body2">
                         {formatThroughput(task.last_exec.throughput_mbs)}
@@ -778,6 +778,12 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                       <Typography variant="body2">
                         {formatFileThroughput(task.last_exec.file_throughput)}
                       </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        Verificados
+                      </Typography>
+                      <Typography variant="body2">{task.last_exec.files_verified}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -824,9 +830,10 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                           <TableCell>Duracion</TableCell>
                           <TableCell>Transferidos</TableCell>
                           <TableCell>Omitidos</TableCell>
+                          <TableCell>Verificados</TableCell>
                           <TableCell>% Cambio</TableCell>
                           <TableCell>Datos</TableCell>
-                          <TableCell>MB/s</TableCell>
+                          <TableCell>MiB/s</TableCell>
                           <TableCell>Archivos/s</TableCell>
                           <TableCell>Logs</TableCell>
                         </TableRow>
@@ -835,7 +842,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                       <TableBody>
                         {!task.history.length && (
                           <TableRow>
-                            <TableCell colSpan={10} sx={{ color: 'text.secondary' }}>
+                            <TableCell colSpan={11} sx={{ color: 'text.secondary' }}>
                               Esta tarea aun no tiene ejecuciones registradas en DataSync.
                             </TableCell>
                           </TableRow>
@@ -856,6 +863,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                               <TableCell>{execution.duration}</TableCell>
                               <TableCell>{execution.files_transferred}</TableCell>
                               <TableCell>{execution.files_skipped}</TableCell>
+                              <TableCell>{execution.files_verified}</TableCell>
                               <TableCell>{formatPercentChange(execution.pct_changed)}</TableCell>
                               <TableCell>
                                 {formatStorageFromBytes(execution.bytes_transferred)}
@@ -893,7 +901,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                             rows.push(
                               <TableRow key={`${executionKey}-error`}>
                                 <TableCell
-                                  colSpan={10}
+                                  colSpan={11}
                                   sx={{
                                     color: 'error.main',
                                     borderBottom: `1px solid ${varAlpha(theme.vars.palette.error.mainChannel, 0.2)}`,

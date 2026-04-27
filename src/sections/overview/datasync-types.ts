@@ -26,6 +26,7 @@ export type DatasyncExecution = {
   duration_secs: number;
   files_transferred: number;
   files_skipped: number;
+  files_verified: number;
   pct_changed: number;
   bytes_transferred: number;
   bytes_source: string;
