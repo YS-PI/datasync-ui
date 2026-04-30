@@ -73,6 +73,7 @@ const DATASYNC_MODULE_LABELS: Record<DatasyncModule, string> = {
   SIMA: 'SIMA',
   GLPI: 'GLPI',
   AULAVIRTUAL: 'Aula Virtual',
+  SQLSERVER: 'SQL SERVER',
 };
 
 const DATASYNC_MODULES = new Set<DatasyncModule>([
@@ -81,6 +82,7 @@ const DATASYNC_MODULES = new Set<DatasyncModule>([
   'SIMA',
   'GLPI',
   'AULAVIRTUAL',
+  'SQLSERVER',
 ]);
 
 type LogLevelFilter = 'ALL' | 'INFO' | 'ERROR';
@@ -108,6 +110,16 @@ function resolveTaskModule(task: DatasyncTask): DatasyncModule {
 
   if (diskValue === 'AULAVIRTUAL' || taskName.includes('AULAVIRTUAL')) {
     return 'AULAVIRTUAL';
+  }
+
+  if (
+    moduleValue === 'SQL SERVER' ||
+    diskValue === 'SQLSERVER' ||
+    diskValue === 'SQL SERVER' ||
+    taskName.includes('URPBD') ||
+    taskName.includes('BDURP')
+  ) {
+    return 'SQLSERVER';
   }
 
   return taskName.includes('ORACLE') ? 'ORACLE' : 'APPROD';

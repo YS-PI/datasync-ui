@@ -37,4 +37,9 @@ export const navData = [
     path: '/aulavirtual',
     icon: icon('ic-analytics'),
   },
+  {
+    title: 'SQL SERVER',
+    path: '/sql-server',
+    icon: icon('ic-analytics'),
+  },
 ];

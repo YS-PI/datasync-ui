@@ -18,6 +18,7 @@ export const OraclePage = lazy(() => import('../pages/oracle'));
 export const SimaPage = lazy(() => import('../pages/sima'));
 export const GlpiPage = lazy(() => import('../pages/glpi'));
 export const AulaVirtualPage = lazy(() => import('../pages/aulavirtual'));
+export const SqlServerPage = lazy(() => import('../pages/sql-server'));
 export const BlogPage = lazy(() => import('src/pages/blog'));
 export const UserPage = lazy(() => import('src/pages/user'));
 export const SignInPage = lazy(() => import('src/pages/sign-in'));
@@ -63,6 +64,7 @@ export const routesSection: RouteObject[] = [
       { path: 'sima', element: <SimaPage /> },
       { path: 'glpi', element: <GlpiPage /> },
       { path: 'aulavirtual', element: <AulaVirtualPage /> },
+      { path: 'sql-server', element: <SqlServerPage /> },
       { path: 'user', element: <UserPage /> },
       { path: 'products', element: <ProductsPage /> },
       { path: 'blog', element: <BlogPage /> },
