@@ -63,7 +63,6 @@ import type {
 const DATASYNC_API_URL =
   import.meta.env.VITE_DATASYNC_API_URL ??
   'https://kyk7nif0tj.execute-api.us-east-1.amazonaws.com/';
-const AUTO_REFRESH_MS = 5 * 60 * 60 * 1000;
 let datasyncResponseCache: DatasyncResponse | null = null;
 let datasyncFetchPromise: Promise<DatasyncResponse> | null = null;
 
@@ -254,16 +253,6 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
 
   useEffect(() => {
     void fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      void fetchData();
-    }, AUTO_REFRESH_MS);
-
-    return () => {
-      window.clearInterval(interval);
-    };
   }, [fetchData]);
 
   const summary = useMemo(() => (data ? summarizeDatasync(data) : null), [data]);
@@ -996,9 +985,6 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
               </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center">
-                <Label color="info" variant="soft">
-                  Auto-refresh 5h
-                </Label>
                 <ButtonGroup size="small" variant="outlined">
                   <Button
                     variant={mode === 'light' ? 'contained' : 'outlined'}
