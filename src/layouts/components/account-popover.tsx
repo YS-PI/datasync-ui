@@ -28,8 +28,41 @@ export type AccountPopoverProps = IconButtonProps & {
 };
 
 export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
-  const router = useRouter();
+  const isAuthEnabled = isCognitoConfigured();
+
+  if (isAuthEnabled) {
+    return <AuthenticatedAccountPopover sx={sx} {...other} />;
+  }
+
+  return <AccountPopoverContent sx={sx} {...other} />;
+}
+
+function AuthenticatedAccountPopover({ sx, ...other }: AccountPopoverProps) {
   const auth = useAuth();
+
+  const authDisplayName =
+    auth?.user?.profile?.['cognito:username']?.toString() ||
+    auth?.user?.profile?.name?.toString() ||
+    auth?.user?.profile?.preferred_username?.toString() ||
+    '';
+
+  const authDisplayEmail = auth?.user?.profile?.email?.toString() || '';
+
+  return (
+    <AccountPopoverContent
+      sx={sx}
+      displayName={authDisplayName}
+      displayEmail={authDisplayEmail}
+      {...other}
+    />
+  );
+}
+
+function AccountPopoverContent({ sx, displayName, displayEmail, ...other }: AccountPopoverProps & {
+  displayName?: string;
+  displayEmail?: string;
+}) {
+  const router = useRouter();
   const isAuthEnabled = isCognitoConfigured();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
@@ -67,19 +100,8 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
     router.replace('/');
   }, [clearBrowserSession, handleClosePopover, isAuthEnabled, router]);
 
-  const authDisplayName =
-    auth?.user?.profile?.['cognito:username']?.toString() ||
-    auth?.user?.profile?.name?.toString() ||
-    auth?.user?.profile?.preferred_username?.toString() ||
-    '';
-
-  const authDisplayEmail = auth?.user?.profile?.email?.toString() || '';
-
-  const displayName =
-    (isAuthEnabled ? authDisplayName : '') || _myAccount?.displayName || 'Jaydon Frankie';
-
-  const displayEmail =
-    (isAuthEnabled ? authDisplayEmail : '') || _myAccount?.email || 'demo@minimals.cc';
+  const accountDisplayName = displayName || _myAccount?.displayName || 'Jaydon Frankie';
+  const accountDisplayEmail = displayEmail || _myAccount?.email || 'demo@minimals.cc';
 
   return (
     <>
@@ -114,11 +136,11 @@ export function AccountPopover({ sx, ...other }: AccountPopoverProps) {
       >
         <Box sx={{ p: 2, pb: 1.5 }}>
           <Typography variant="subtitle2" noWrap>
-            {displayName}
+            {accountDisplayName}
           </Typography>
 
           <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-            {displayEmail}
+            {accountDisplayEmail}
           </Typography>
         </Box>
 

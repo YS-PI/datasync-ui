@@ -60,11 +60,20 @@ import type {
   DatasyncExecution,
 } from '../datasync-types';
 
-const DATASYNC_API_URL =
-  import.meta.env.VITE_DATASYNC_API_URL ??
-  'https://kyk7nif0tj.execute-api.us-east-1.amazonaws.com/';
+const DATASYNC_API_URL = import.meta.env.VITE_DATASYNC_API_URL;
+const DATASYNC_REFRESH_INTERVAL_SECONDS = 60;
+const DATASYNC_REFRESH_INTERVAL_MS = 1000;
 let datasyncResponseCache: DatasyncResponse | null = null;
 let datasyncFetchPromise: Promise<DatasyncResponse> | null = null;
+let datasyncNextRefreshAt = Date.now() + DATASYNC_REFRESH_INTERVAL_SECONDS * 1000;
+
+function resetDatasyncRefreshCountdown() {
+  datasyncNextRefreshAt = Date.now() + DATASYNC_REFRESH_INTERVAL_SECONDS * 1000;
+}
+
+function getSecondsUntilDatasyncRefresh() {
+  return Math.max(0, Math.ceil((datasyncNextRefreshAt - Date.now()) / 1000));
+}
 
 const DATASYNC_MODULE_LABELS: Record<DatasyncModule, string> = {
   APPROD: 'APPROD',
@@ -191,6 +200,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
   const [expandedTask, setExpandedTask] = useState<string | false>(false);
   const [isLoading, setIsLoading] = useState(!datasyncResponseCache);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(getSecondsUntilDatasyncRefresh);
   const [error, setError] = useState<string | null>(null);
   const [translatedErrors, setTranslatedErrors] = useState<Record<string, boolean>>({});
   const [logLevelFilter, setLogLevelFilter] = useState<LogLevelFilter>('ALL');
@@ -201,13 +211,13 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
   const hasInitializedExpandedTaskRef = useRef(false);
 
   const fetchData = useCallback(
-    async (isManualRefresh = false) => {
+    async (isManualRefresh = false, forceRefresh = isManualRefresh) => {
       if (isManualRefresh) {
         setIsRefreshing(true);
       }
 
       try {
-        const payload = await fetchDatasyncResponse(isManualRefresh);
+        const payload = await fetchDatasyncResponse(forceRefresh);
         const scopedPayload = mapResponseByModule(payload, moduleFilter);
         const sortedTasks = scopedPayload.tasks;
 
@@ -253,6 +263,38 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
 
   useEffect(() => {
     void fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        resetDatasyncRefreshCountdown();
+        setSecondsUntilRefresh(getSecondsUntilDatasyncRefresh());
+        void fetchData(false, true);
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      const nextSeconds = getSecondsUntilDatasyncRefresh();
+
+      if (nextSeconds <= 0) {
+        refreshIfVisible();
+        return;
+      }
+
+      setSecondsUntilRefresh(nextSeconds);
+    }, DATASYNC_REFRESH_INTERVAL_MS);
+
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
   }, [fetchData]);
 
   const summary = useMemo(() => (data ? summarizeDatasync(data) : null), [data]);
@@ -985,6 +1027,9 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
               </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center">
+                <Label color="info" variant="soft">
+                  Tiempo real {secondsUntilRefresh}s
+                </Label>
                 <ButtonGroup size="small" variant="outlined">
                   <Button
                     variant={mode === 'light' ? 'contained' : 'outlined'}
@@ -999,7 +1044,15 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                     Oscuro
                   </Button>
                 </ButtonGroup>
-                <Button variant="contained" onClick={() => fetchData(true)} disabled={isRefreshing}>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    resetDatasyncRefreshCountdown();
+                    setSecondsUntilRefresh(getSecondsUntilDatasyncRefresh());
+                    void fetchData(true);
+                  }}
+                  disabled={isRefreshing}
+                >
                   {isRefreshing ? 'Actualizando...' : 'Actualizar'}
                 </Button>
               </Stack>

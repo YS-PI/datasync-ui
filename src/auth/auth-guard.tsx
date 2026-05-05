@@ -11,6 +11,14 @@ type Props = {
 };
 
 export function AuthGuard({ children }: Props) {
+  if (!isCognitoConfigured()) {
+    return <>{children}</>;
+  }
+
+  return <AuthenticatedGuard>{children}</AuthenticatedGuard>;
+}
+
+function AuthenticatedGuard({ children }: Props) {
   const auth = useAuth();
   const activeNavigator = auth?.activeNavigator;
   const error = auth?.error;
@@ -27,10 +35,6 @@ export function AuthGuard({ children }: Props) {
       void signinRedirect();
     }
   }, [activeNavigator, error, isAuthenticated, isLoading, signinRedirect]);
-
-  if (!isCognitoConfigured()) {
-    return <>{children}</>;
-  }
 
   if (isLoading || activeNavigator) {
     return (
