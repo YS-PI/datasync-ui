@@ -144,20 +144,27 @@ function mapResponseByModule(
   return { ...payload, tasks: sortTasksByName(tasksByModule) };
 }
 
-async function fetchDatasyncResponse(forceRefresh = false): Promise<DatasyncResponse> {
-  if (!forceRefresh && datasyncResponseCache) {
+async function fetchDatasyncResponse(forceRefresh = false, isManualSync = false): Promise<DatasyncResponse> {
+  if (!forceRefresh && !isManualSync && datasyncResponseCache) {
     return datasyncResponseCache;
   }
 
-  if (!forceRefresh && datasyncFetchPromise) {
+  if (!forceRefresh && !isManualSync && datasyncFetchPromise) {
     return datasyncFetchPromise;
   }
 
+  const url = isManualSync
+    ? `${DATASYNC_API_URL.replace(/\/+$/, '')}/sync`
+    : DATASYNC_API_URL;
+
+  const method = isManualSync ? 'POST' : 'GET';
+
   datasyncFetchPromise = (async () => {
-    const response = await fetch(DATASYNC_API_URL, {
-      method: 'GET',
+    const response = await fetch(url, {
+      method,
       headers: {
         Accept: 'application/json',
+        ...(isManualSync ? { 'Content-Type': 'application/json' } : {}),
       },
     });
 
@@ -217,7 +224,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
       }
 
       try {
-        const payload = await fetchDatasyncResponse(forceRefresh);
+        const payload = await fetchDatasyncResponse(forceRefresh, isManualRefresh);
         const scopedPayload = mapResponseByModule(payload, moduleFilter);
         const sortedTasks = scopedPayload.tasks;
 
