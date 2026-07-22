@@ -58,7 +58,12 @@ function AuthenticatedAccountPopover({ sx, ...other }: AccountPopoverProps) {
   );
 }
 
-function AccountPopoverContent({ sx, displayName, displayEmail, ...other }: AccountPopoverProps & {
+function AccountPopoverContent({
+  sx,
+  displayName,
+  displayEmail,
+  ...other
+}: AccountPopoverProps & {
   displayName?: string;
   displayEmail?: string;
 }) {

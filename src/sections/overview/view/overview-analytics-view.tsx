@@ -33,6 +33,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { AnalyticsWidgetSummary } from 'src/sections/overview/analytics-widget-summary';
 
+import { DatasyncTaskTrend } from '../datasync-task-trend';
 import {
   getExecutionKey,
   sortTasksByName,
@@ -94,6 +95,8 @@ const DATASYNC_MODULES = new Set<DatasyncModule>([
 ]);
 
 type LogLevelFilter = 'ALL' | 'INFO' | 'ERROR';
+type TaskViewMode = 'detail' | 'trend';
+type ExpandedTaskState = { name: string; view: TaskViewMode } | null;
 
 type OverviewAnalyticsViewProps = {
   moduleFilter?: DatasyncModule;
@@ -144,7 +147,10 @@ function mapResponseByModule(
   return { ...payload, tasks: sortTasksByName(tasksByModule) };
 }
 
-async function fetchDatasyncResponse(forceRefresh = false, isManualSync = false): Promise<DatasyncResponse> {
+async function fetchDatasyncResponse(
+  forceRefresh = false,
+  isManualSync = false
+): Promise<DatasyncResponse> {
   if (!forceRefresh && !isManualSync && datasyncResponseCache) {
     return datasyncResponseCache;
   }
@@ -153,9 +159,7 @@ async function fetchDatasyncResponse(forceRefresh = false, isManualSync = false)
     return datasyncFetchPromise;
   }
 
-  const url = isManualSync
-    ? `${DATASYNC_API_URL.replace(/\/+$/, '')}/sync`
-    : DATASYNC_API_URL;
+  const url = isManualSync ? `${DATASYNC_API_URL.replace(/\/+$/, '')}/sync` : DATASYNC_API_URL;
 
   const method = isManualSync ? 'POST' : 'GET';
 
@@ -204,7 +208,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
   const [data, setData] = useState<DatasyncResponse | null>(() =>
     datasyncResponseCache ? mapResponseByModule(datasyncResponseCache, moduleFilter) : null
   );
-  const [expandedTask, setExpandedTask] = useState<string | false>(false);
+  const [expandedTask, setExpandedTask] = useState<ExpandedTaskState>(null);
   const [isLoading, setIsLoading] = useState(!datasyncResponseCache);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(getSecondsUntilDatasyncRefresh);
@@ -234,22 +238,18 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
         setExpandedTask((current) => {
           if (!hasInitializedExpandedTaskRef.current) {
             hasInitializedExpandedTaskRef.current = true;
-            return false;
+            return null;
           }
 
-          if (sortedTasks.length === 0) {
-            return false;
+          if (sortedTasks.length === 0 || !current) {
+            return null;
           }
 
-          if (current === false) {
-            return false;
-          }
-
-          if (sortedTasks.some((task) => task.name === current)) {
+          if (sortedTasks.some((task) => task.name === current.name)) {
             return current;
           }
 
-          return sortedTasks[0]?.name ?? false;
+          return null;
         });
       } catch (fetchError) {
         const errorMessage =
@@ -373,8 +373,13 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
     };
   }, [data]);
 
-  const handleToggleTask = (taskName: string) => {
-    setExpandedTask((current) => (current === taskName ? false : taskName));
+  const handleToggleTask = (taskName: string, view: TaskViewMode = 'detail') => {
+    setExpandedTask((current) => {
+      if (current && current.name === taskName && current.view === view) {
+        return null;
+      }
+      return { name: taskName, view };
+    });
   };
 
   const handleToggleTranslation = (errorKey: string) => {
@@ -586,7 +591,8 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
     const isApprodTask = taskModule === 'APPROD';
     const isOracleTask = taskModule === 'ORACLE';
     const hasRecentErrors = taskHasRecentErrors(task);
-    const isExpanded = expandedTask === task.name;
+    const isDetailExpanded = expandedTask?.name === task.name && expandedTask.view === 'detail';
+    const isTrendExpanded = expandedTask?.name === task.name && expandedTask.view === 'trend';
     const validation = getValidationMessage(task);
     const taskLastErrorKey = `${task.name}-last-error`;
     const lastExecDisplayStatus = getExecutionDisplayStatus(task.last_exec);
@@ -598,9 +604,9 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
       ? theme.vars.palette.info.main
       : hasNoExecutions
         ? theme.vars.palette.grey[500]
-      : isCurrentError
-        ? theme.vars.palette.error.main
-        : theme.vars.palette.success.main;
+        : isCurrentError
+          ? theme.vars.palette.error.main
+          : theme.vars.palette.success.main;
 
     const validationMessage =
       validation.severity === 'error' && task.last_exec.error
@@ -722,14 +728,24 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
             </Grid>
 
             <Grid size={{ xs: 12, md: 2.5 }}>
-              <Stack direction="row" justifyContent="flex-end">
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
                 <Button
                   size="small"
-                  variant={isExpanded ? 'contained' : 'outlined'}
-                  color={isExpanded ? 'primary' : 'inherit'}
-                  onClick={() => handleToggleTask(task.name)}
+                  variant={isDetailExpanded ? 'contained' : 'outlined'}
+                  color={isDetailExpanded ? 'primary' : 'inherit'}
+                  onClick={() => handleToggleTask(task.name, 'detail')}
                 >
-                  {isExpanded ? 'Ocultar' : 'Detalle'}
+                  {isDetailExpanded ? 'Ocultar' : 'Detalle'}
+                </Button>
+
+                <Button
+                  size="small"
+                  variant={isTrendExpanded ? 'contained' : 'outlined'}
+                  color={isTrendExpanded ? 'primary' : 'info'}
+                  startIcon={<Iconify icon="eva:trending-up-fill" />}
+                  onClick={() => handleToggleTask(task.name, 'trend')}
+                >
+                  {isTrendExpanded ? 'Ocultar' : 'Tendencia'}
                 </Button>
               </Stack>
             </Grid>
@@ -742,7 +758,7 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
           )}
         </Box>
 
-        {isExpanded && (
+        {isDetailExpanded && (
           <>
             <Divider />
 
@@ -971,6 +987,13 @@ export function OverviewAnalyticsView({ moduleFilter }: OverviewAnalyticsViewPro
                 </Box>
               </Grid>
             </Grid>
+          </>
+        )}
+
+        {isTrendExpanded && (
+          <>
+            <Divider />
+            <DatasyncTaskTrend task={task} />
           </>
         )}
       </Card>
